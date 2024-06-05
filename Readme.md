@@ -15,38 +15,41 @@
 - You should have this result :
 ![LoRa set up](https://github.com/20100dbg/lora/blob/master/lora.jpg?raw=true)
 
+
 ##### Setup network (static IP address)
 Not LoRa related, but needed in my case
-- sudo nmtui
-- in Wired Connection, set :
-- - IP = 169.254.72.40/16
-- - gateway = server IP (for me 169.254.72.20)
+`sudo nmtui`
+
+- Browse to Wired Connection, set :
+`IP = 169.254.72.40/16`
+`gateway = server IP` (for me 169.254.72.20)
 - disable + enable connection, should be good to go
 
 
 ### Setup software
 
 ##### Setup serial port
-- sudo raspi-config -> Interface options -> Serial Port
+`sudo raspi-config`
+- Browse to Interface options -> Serial Port
 - First disable shell over serial, then enable serial port hardware 
-- reboot
+`reboot`
 
 ##### Setup pyserial (serial port access from python)
-- [Download pyserial](https://github.com/pyserial/pyserial/releases)
-- `gzip -d pyserial-3.5b0.tar.gz`
-- `tar -xvf pyserial-3.5b0.tar`
-- `cd pyserial-3.5b0 && sudo python setup.py install`
+[Download pyserial](https://github.com/pyserial/pyserial/releases)
+`gzip -d pyserial-3.5b0.tar.gz`
+`tar -xvf pyserial-3.5b0.tar`
+`cd pyserial-3.5b0 && sudo python setup.py install`
 
 
 ### Install my small LoRa PoC
-- `git clone https://github.com/20100dbg/lora`
-- `cd lora`
+`git clone https://github.com/20100dbg/lora`
+`cd lora`
 
 ##### Check if we can access serial port
-- `sudo python check_port.py`
+`sudo python check_port.py`
 
 ##### Let's play
-- `sudo python lora.py`
+`sudo python lora.py`
 
 
 ### Just so you know
@@ -75,7 +78,9 @@ The receive method was replaced with :
 ```
 
 
-##### References
+### References
+
 [MithunHub's LoRa repo](https://github.com/MithunHub/LoRa/)
+
 [LoRa Example software](https://github.com/MithunHub/LoRa/archive/refs/heads/main.zip)
 
