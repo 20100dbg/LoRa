@@ -1,4 +1,4 @@
-<# Finally a working guide to LoRa
+# Finally a working guide to LoRa
 
 ### Setup hardware
 
@@ -18,34 +18,42 @@ You should have this result :
 
 
 #### Setup network (static IP address)
-Not LoRa related, but needed in my case
+Not LoRa related, but needed in my case.
+Let's start network manager utility :
 
-`sudo nmtui`
+```
+sudo nmtui
+```
 
 Browse to Wired Connection, set :
-```
-IP = 169.254.72.40/16
-gateway = server IP
-```
-(for me server IP = 169.254.72.20)
-Disable + enable connection, should be good to go
+- IP = 169.254.72.40/16
+- gateway = server IP (for me server IP = 169.254.72.20)
+
+Finally disable + enable connection, should be good to go
 
 
 ### Setup software
 
 #### Setup serial port
-`sudo raspi-config`
+Start Raspberry Pi config utility :
+
+```
+sudo raspi-config
+```
 - Browse to Interface options -> Serial Port
 - First disable shell over serial, then enable serial port hardware 
 
-`reboot`
+And then reboot
+```
+reboot
+```
 
 #### Setup pyserial (serial port access from python)
 [Download pyserial](https://github.com/pyserial/pyserial/releases)
 
 ```
 gzip -d pyserial-3.5b0.tar.gz
-tar -xvf pyserial-3.5b0.tar`
+tar -xvf pyserial-3.5b0.tar
 cd pyserial-3.5b0 && sudo python setup.py install
 ```
 
@@ -56,10 +64,14 @@ cd lora
 ```
 
 #### Check if we can access serial port
-`sudo python check_port.py`
+```
+sudo python check_port.py
+```
 
 #### Let's play
-`sudo python lora.py`
+```
+sudo python lora.py
+```
 
 
 ### Just so you know
