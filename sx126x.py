@@ -1,317 +1,264 @@
-# This file is used for LoRa and Raspberry Pi4B/Pi Zero
-# This is the main class file that is often used for LoRa parameters settings
-
 import RPi.GPIO as GPIO
-import serial
 import time
-import datetime
+import serial
+import os
 
-class sx126x:
+class sx126x():
 
-    M0 = 22
-    M1 = 27
-    # if the header is 0xC0, then the LoRa register settings dont lost when it poweroff, and 0xC2 will be lost.
-    # cfg_reg = [0xC0,0x00,0x09,0x00,0x00,0x00,0x62,0x00,0x17,0x00,0x00,0x00]
-    cfg_reg = [0xC2,0x00,0x09,0x00,0x00,0x00,0x62,0x00,0x17,0x00,0x00,0x00]
-    get_reg = bytes(12)
-    rssi = False
-    addr = 65535
-    serial_n = ""
-    send_to = 0
-    addr_temp = 0
-    freq = 868
-    power = 22
-    air_speed =2400
+    MSG_TYPE = { 'TXT' : 1, 'FILE' : 2 }
 
-    SX126X_UART_BAUDRATE_1200 = 0x00
-    SX126X_UART_BAUDRATE_2400 = 0x20
-    SX126X_UART_BAUDRATE_4800 = 0x40
-    SX126X_UART_BAUDRATE_9600 = 0x60
-    SX126X_UART_BAUDRATE_19200 = 0x80
-    SX126X_UART_BAUDRATE_38400 = 0xA0
-    SX126X_UART_BAUDRATE_57600 = 0xC0
-    SX126X_UART_BAUDRATE_115200 = 0xE0
+    SERIAL_PORT_RATE = {'1200' : 0b00000000, '2400' : 0b00100000, '4800' : 0b01000000, '9600' : 0b01100000, '19200' : 0b10000000, '38400' : 0b10100000, '57600' : 0b11000000, '115200' : 0b11100000 }
+    SERIAL_PARITY_BIT = {'8N1' : 0b00000000, '8O1' : 0b00001000, '8E1' : 0b00010000 } #serial.PARITY_NONE - 8N1, serial.PARITY_ODD - 8O1, serial.PARITY_EVEN - 8E1    
+    AIR_DATA_RATE = {'0.3' : 0b00000000, '1.2' : 0b00000001, '2.4' : 0b00000010, '4.8' : 0b00000011, '9.6' : 0b00000100, '19.2' : 0b00000101, '38.4' : 0b00000110, '62.5' : 0b00000111 }
+    SUB_PACKET_SIZE = {'240' : 0b00000000, '128' : 0b01000000, '64' : 0b10000000, '32' : 0b11000000 }
+    CHANNEL_NOISE = {'off' : 0b00000000, 'on' : 0b00100000 }
+    TX_POWER = {'22' : 0b00000000, '17' : 0b00000001, '13' : 0b00000010, '10' : 0b00000011 }
+    ENABLE_RSSI = {'off' : 0b00000000, 'on' : 0b10000000 }
+    TRANSMISSION_MODE = {'fixedPoint' : 0b01000000, 'transparent' : 0b000000000 }
+    ENABLE_REPEATER = {'off' : 0b00000000, 'on' : 0b00100000 }
+    ENABLE_LBT = {'off' : 0b00000000, 'on' : 0b00010000 }
+    WOR_CONTROL = {'receiver' : 0b00001000, 'transmitter' : 0b00000000 }
+    WOR_CYCLE = {'500' : 0b00000000, '1000' : 0b00000001, '1500' : 0b00000010, '2000' : 0b00000011, '2500' : 0b00000100, '3000' : 0b00000101, '3500' : 0b00000110, '4000' : 0b00000111 }
 
-    SX126X_AIR_SPEED_300bps = 0x00
-    SX126X_AIR_SPEED_1200bps = 0x01
-    SX126X_AIR_SPEED_2400bps = 0x02
-    SX126X_AIR_SPEED_4800bps = 0x03
-    SX126X_AIR_SPEED_9600bps = 0x04
-    SX126X_AIR_SPEED_19200bps = 0x05
-    SX126X_AIR_SPEED_38400bps = 0x06
-    SX126X_AIR_SPEED_62500bps = 0x07
 
-    SX126X_PACKAGE_SIZE_240_BYTE = 0x00
-    SX126X_PACKAGE_SIZE_128_BYTE = 0x40
-    SX126X_PACKAGE_SIZE_64_BYTE = 0x80
-    SX126X_PACKAGE_SIZE_32_BYTE = 0xC0
+    def __init__(self, address = 100, network=0, channel=18, txPower='22', enableRSSI='off'):
 
-    SX126X_Power_22dBm = 0x00
-    SX126X_Power_17dBm = 0x01
-    SX126X_Power_13dBm = 0x02
-    SX126X_Power_10dBm = 0x03
+        self.logicalAddress = address
 
-    def __init__(self,serial_num,freq,addr,power,rssi):
-        self.rssi = rssi
-        self.addr = addr
-        self.freq = freq
-        self.serial_n = serial_num
-        self.power = power
-        self.send_to = addr
+        #set default parameters
+        self.port = '/dev/ttyS0'
+        self.serialPortRate = '9600'
+        self.timeout = 1
+        self.serialParityBit = serial.PARITY_NONE
+        self.loraParityBit = self.convertSerialParity(self.serialParityBit)
+        
+        self.channel = int(channel) #0 - 80
+        self.crypt = 0 #0 - 65535
+        self.address = 65535 #int(address) #0 - 65535
+        self.network = int(network) #0 - 255
 
-        # Initial the GPIO for M0 and M1 Pin
+        self.airDataRate ='2.4'
+        self.subPacketSize ='128'
+        self.channelNoise ='off'
+        self.txPower = str(txPower)
+        self.enableRSSI = enableRSSI
+        self.transmissionMode ='transparent'
+        self.enableRepeater ='off'
+        self.enableLBT = 'off'
+        self.WORcontrol = 'transmitter'
+        self.WORcycle = '2000'
+        
+        
+        self.M0 = 22
+        self.M1 = 27
+
         GPIO.setmode(GPIO.BCM)
         GPIO.setwarnings(False)
-        GPIO.setup(self.M0,GPIO.OUT)
-        GPIO.setup(self.M1,GPIO.OUT)
-        GPIO.output(self.M0,GPIO.LOW)
-        GPIO.output(self.M1,GPIO.HIGH)
+        GPIO.setup(self.M0, GPIO.OUT)
+        GPIO.setup(self.M1, GPIO.OUT)
 
-        # The hardware UART of Pi3B+,Pi4B is /dev/ttyS0
-        self.ser = serial.Serial(serial_num,9600)
-        self.ser.flushInput()
-        self.set(freq,addr,power,rssi)
+        self.gpio_mode("let's rock")
 
-    def set(self,freq,addr,power,rssi,air_speed=2400,\
-            net_id=0,buffer_size = 240,crypt=0,\
-            relay=False,lbt=False,wor=False):
-        self.send_to = addr
-        self.addr = addr
-        # We should pull up the M1 pin when sets the module
-        GPIO.output(self.M0,GPIO.LOW)
-        GPIO.output(self.M1,GPIO.HIGH)
-        time.sleep(0.1)
-        low_addr = addr & 0xff
-        high_addr = addr >> 8 & 0xff
-        net_id_temp = net_id & 0xff
-        if freq > 850:
-            freq_temp = freq - 850
-        elif freq >410:
-            freq_temp = freq - 410
+        #write config with default parameters
+        self.writeConfig()
 
-        air_speed_temp = self.air_speed_cal(air_speed)
-        # if air_speed_temp != None:
 
-        buffer_size_temp = self.buffer_size_cal(buffer_size)
-        # if air_speed_temp != None:
-
-        power_temp = self.power_cal(power)
-        #if power_temp != None:
-
-        # At this moment there is a bug in get_channel_rssi() function with SX1268 HAT
-        # The get_channel_rssi() function works well in SX1262 HAT
-        # To solve the problem for SX1268, we use an alternative method to obtain RSSI value
-        # We enable the seventh bit of 06H register
-        # and obatin the RSSI value when the packet is received.
-
-        if rssi:
-            # if use get_channel_rssi() func,  then uncomment next line and comment next to next line!
-            # rssi_temp = 0x20
-            rssi_temp = 0x80
+    def gpio_mode(self, mode):
+        if mode == 'conf':
+            GPIO.output(self.M0, False)
+            GPIO.output(self.M1, True)
+        elif mode == 'wor':
+            GPIO.output(self.M0, True)
+            GPIO.output(self.M1, False)
+        elif mode == 'sleep':
+            GPIO.output(self.M0, True)
+            GPIO.output(self.M1, True)
         else:
-            rssi_temp = 0x00
+            GPIO.output(self.M0, False)
+            GPIO.output(self.M1, False)
 
-        l_crypt = crypt & 0xff
-        h_crypt = crypt >> 8 & 0xff
+        time.sleep(.2)
 
-        self.cfg_reg[3] = high_addr
-        self.cfg_reg[4] = low_addr
-        self.cfg_reg[5] = net_id_temp
-        self.cfg_reg[6] = self.SX126X_UART_BAUDRATE_9600 + air_speed_temp
-        #
-        # it will enable to read noise rssi value when add 0x20 as follow
-        #
-        self.cfg_reg[7] = buffer_size_temp + power_temp + 0x20
-        self.cfg_reg[8] = freq_temp
-        #
-        # it will output a packet rssi value following received message
-        # when enable seventh bit with 06H register(rssi_temp = 0x80)
-        #
-        self.cfg_reg[9] = 0x03 + rssi_temp
-        self.cfg_reg[10] = h_crypt
-        self.cfg_reg[11] = l_crypt
-        self.ser.flushInput()
 
-        for i in range(2):
-            self.ser.write(bytes(self.cfg_reg))
-            r_buff = 0
-            time.sleep(0.2)
-            if self.ser.inWaiting() > 0:
-                time.sleep(0.1)
-                r_buff = self.ser.read(self.ser.inWaiting())
-                if r_buff[0] == 0xC1:
-                    pass
-                    # print("parameters setting is :",end='')
-                    # for i in self.cfg_reg:
-                        # print(hex(i),end=' ')
+    def openSerial(self):
+        ser = serial.Serial(port=self.port, baudrate=self.serialPortRate, \
+                    parity=self.serialParityBit, stopbits=serial.STOPBITS_ONE,
+                    bytesize=serial.EIGHTBITS, timeout=self.timeout)
 
-                    # print('\r\n')
-                    # print("parameters return is  :",end='')
-                    # for i in r_buff:
-                        # print(hex(i),end=' ')
-                    # print('\r\n')
-                else:
-                    pass
-                    #print("parameters setting fail :",r_buff)
-                break
-            else:
-                print("setting has been failed, trying again!")
-                self.ser.flushInput()
-                time.sleep(0.2)
-                print('\x1b[1A',end='\r')
-                if i == 1:
-                    print("setting fail, press Esc to exit and run again")
-                    time.sleep(2)
-                    print('\x1b[1A',end='\r')
-                pass
+        return ser
 
-        GPIO.output(self.M0,GPIO.LOW)
-        GPIO.output(self.M1,GPIO.LOW)
-        time.sleep(0.1)
 
-    def air_speed_cal(self,airSpeed):
-        air_speed_c = {
-            1200:self.SX126X_AIR_SPEED_1200bps,
-            2400:self.SX126X_AIR_SPEED_2400bps,
-            4800:self.SX126X_AIR_SPEED_4800bps,
-            9600:self.SX126X_AIR_SPEED_9600bps,
-            19200:self.SX126X_AIR_SPEED_19200bps,
-            38400:self.SX126X_AIR_SPEED_38400bps,
-            62500:self.SX126X_AIR_SPEED_62500bps
-        }
-        return air_speed_c.get(airSpeed,None)
+    def sendraw(self, data):
+        ser = self.openSerial()
 
-    def power_cal(self,power):
-        power_c = {
-            22:self.SX126X_Power_22dBm,
-            17:self.SX126X_Power_17dBm,
-            13:self.SX126X_Power_13dBm,
-            10:self.SX126X_Power_10dBm
-        }
-        return power_c.get(power,None)
+        ser.write(data)
+        time.sleep(.2)
+        #ret = ser.readlines()
+        ser.close()
 
-    def buffer_size_cal(self,bufferSize):
-        buffer_size_c = {
-            240:self.SX126X_PACKAGE_SIZE_240_BYTE,
-            128:self.SX126X_PACKAGE_SIZE_128_BYTE,
-            64:self.SX126X_PACKAGE_SIZE_64_BYTE,
-            32:self.SX126X_PACKAGE_SIZE_32_BYTE
-        }
-        return buffer_size_c.get(bufferSize,None)
 
-    def get_settings(self):
-        # the pin M1 of lora HAT must be high when enter setting mode and get parameters
-        GPIO.output(self.M1,GPIO.HIGH)
-        time.sleep(0.1)
+    def sendmsg(self, data):
+        data = b'\x01' + self.logicalAddress.to_bytes(2, 'big') + data.encode()
+        self.sendraw(data)
 
-        # send command to get setting parameters
-        self.ser.write(bytes([0xC1,0x00,0x09]))
-        if self.ser.inWaiting() > 0:
-            time.sleep(0.1)
-            self.get_reg = self.ser.read(self.ser.inWaiting())
 
-        # check the return characters from HAT and print the setting parameters
-        if self.get_reg[0] == 0xC1 and self.get_reg[2] == 0x09:
-            fre_temp = self.get_reg[8]
-            addr_temp = self.get_reg[3] + self.get_reg[4]
-            air_speed_temp = self.get_reg[6] & 0x03
-            power_temp = self.get_reg[7] & 0x03
+    def sendfile(self, path):
 
-            air_speed_dic = {
-                0x00:"300bps",
-                0x01:"1200bps",
-                0x02:"2400bps",
-                0x03:"4800bps",
-                0x04:"9600bps",
-                0x05:"19200bps",
-                0x06:"38400bps",
-                0x07:"62500bps"
-            }
-            power_dic ={
-                0x00:"22dBm",
-                0x01:"17dBm",
-                0x02:"13dBm",
-                0x03:"10dBm"
-            }
+        #check file exists
+        #convert path -> filename
 
-            print("Frequence is {0}.125MHz.",fre_temp)
-            print("Node address is {0}.",addr_temp)
-            print("Air speed is "+ air_speed_dic(air_speed_temp))
-            print("Power is " + power_dic(power_temp))
-            GPIO.output(M1,GPIO.LOW)
+        if not os.path.exists(path):
+            print("File not found")
+            return
 
-    def send(self,data):
-        GPIO.output(self.M1,GPIO.LOW)
-        GPIO.output(self.M0,GPIO.LOW)
-        time.sleep(0.1)
+        filename = os.path.basename(os.path.realpath(path))
 
-        # add the node address ,and the node of address is 65535 can able to find who sends message
-        l_addr = self.addr_temp & 0xff
-        h_addr = self.addr_temp >> 8 & 0xff
+        ser = self.openSerial()
+        buffer_size = int(self.subPacketSize) -11
+        #print('buffer_size :',buffer_size)
 
-        self.ser.write(bytes([h_addr,l_addr])+data.encode())
-        # if self.rssi == True:
-            # self.get_channel_rssi()
-        time.sleep(0.1)
+        short_filename = filename[0:8].encode()
+        #print('short_filename :',short_filename)
+
+        with open(filename, 'rb') as f:
+            while True:
+
+                buffer = f.read(buffer_size)
+                #print('buffer :', buffer)
+
+                data = b'\x02' + self.logicalAddress.to_bytes(2, 'big') + short_filename + buffer
+                #print('data :', data)
+                
+                ser.write(data)
+                time.sleep(.5)
+
+                if len(buffer) < buffer_size:
+                    break
+
+        #ret = ser.readlines()
+        ser.close()
+
 
     def receive(self):
-        if self.ser.inWaiting() > 0:
-            time.sleep(0.5)
-            r_buff = self.ser.read(self.ser.inWaiting())
 
-            if r_buff:
+        ser = self.openSerial()
 
-                src_node = ((r_buff[0]<<8)+r_buff[1])
-                message = r_buff[2:-1]
-                rssi_dbm = 256-r_buff[-1:][0]
+        data = ser.read_until()
+        if not data:
+            data = None
+        
+        ser.close()
+        return data
 
-                return (src_node, message, rssi_dbm)
 
-        return (None, None, None)
-
-                #print("receive message from address\033[1;32m %d node \033[0m"%((r_buff[0]<<8)+r_buff[1]),end='\r\n',flush = True)
-                #print("message is "+str(r_buff[2:-1]),end='\r\n')
-
-#            # print RSSI
-#            if self.rssi:
-#                # print('\x1b[3A',end='\r')
-#                print("the packet rssi value: -{0}dBm".format(256-r_buff[-1:][0]))
-#                # f=open("g.txt","a")
-#                self.get_channel_rssi()
-#                e = datetime.datetime.now()
-#                f=open("g.txt","a")
-#                f.write("Packet RSSI: -{0}dBm".format(256-r_buff[-1:][0]))
-#                #f.write("a")
-#                # print ("Current date and time = %s" % e)
-#                f.write(" Current date and time = %s\n" % e)
-#                f.close()
-#
-#            else:
-#                pass
-#                #print('\x1b[2A',end='\r')
-
-    def get_channel_rssi(self):
-        GPIO.output(self.M1,GPIO.LOW)
-        GPIO.output(self.M0,GPIO.LOW)
-        time.sleep(0.1)
-        self.ser.flushInput()
-        self.ser.write(bytes([0xC0,0xC1,0xC2,0xC3,0x00,0x02]))
-        time.sleep(0.5)
-        re_temp = bytes(5)
-        if self.ser.inWaiting() > 0:
-            time.sleep(0.1)
-            re_temp = self.ser.read(self.ser.inWaiting())
-        if re_temp[0] == 0xC1 and re_temp[1] == 0x00 and re_temp[2] == 0x02:
-            # print("the current noise rssi value: -{0}dBm".format(256-re_temp[3]))
-            f=open("g.txt","a")
-            print("Noise RSSI value: -{0}dBm".format(256-re_temp[3]))
-            f.write("Noise RSSI: -{0}dBm ".format(256-re_temp[3]))
-            f.close()
+    def convertSerialParity(self,parity):
+        if parity == serial.PARITY_NONE:
+            return "8N1"
+        elif parity == serial.PARITY_ODD:
+            return "8O1"
+        elif parity == serial.PARITY_EVEN:
+            return "8E1"
         else:
-            # pass
-            print("Receive RSSI value failed!")
-            # print("receive rssi value fail: ",re_temp)
+            return "8N1"
 
-    #def relay(self):
-    #def wor(self):
-    #def remote_config(self):
+
+    def getRSSI(self):
+        
+        if self.channelNoise == 'off':
+            return
+
+        ser = self.openSerial()
+        
+        ser.write(b'\xC0\xC1\xC2\xC3\x00\x02')
+        ret = ser.read_until()
+        print(ret)
+        currentNoise = ret[3]
+        lastReceive = ret[4]
+
+        ser.close()
+        return currentNoise, lastReceive
+
+
+
+    def setConfig(self, port=None, serialPortRate=None, timeout=None, serialParityBit=None,
+            channel=None,crypt=None,address=None, network=None,airDataRate=None,subPacketSize=None,
+            channelNoise=None,txPower=None,enableRSSI=None,transmissionMode=None,enableRepeater=None,
+            enableLBT=None,WORcontrol=None,WORcycle=None):
+
+        self.port = port or self.port
+        self.serialPortRate = serialPortRate or self.serialPortRate
+        self.timeout = timeout or self.timeout
+        self.serialParityBit = serialParityBit or self.serialParityBit
+        self.loraParityBit = self.convertSerialParity(self.serialParityBit)
+        
+        self.channel = channel or self.channel
+        self.crypt = crypt or self.crypt
+        self.address = address or self.address
+        self.network = network or self.network
+
+        self.airDataRate = airDataRate or self.airDataRate
+        self.subPacketSize = subPacketSize or self.subPacketSize
+        self.channelNoise = channelNoise or self.channelNoise
+        self.txPower = txPower or self.txPower
+        self.enableRSSI = enableRSSI or self.enableRSSI
+        self.transmissionMode = transmissionMode or self.transmissionMode
+        self.enableRepeater = enableRepeater or self.enableRepeater
+        self.enableLBT = enableLBT or self.enableLBT
+        self.WORcontrol = WORcontrol or self.WORcontrol
+        self.WORcycle = WORcycle or self.WORcycle
+
+        self.writeConfig()
+
+
+    def writeConfig(self):
+
+        #factory reset
+        #C0 00 09 12 34 00 61
+
+        RESERVE = 0b00000000
+
+        #C0 = config, 00 = start address, 09 : length
+        config = bytearray(b'\xC0\x00\x09')
+
+        address_tmp = self.address.to_bytes(2, 'big')
+        config.append(address_tmp[0])
+        config.append(address_tmp[1])
+
+        #config.append(int(addrl))
+
+        config.append(self.network)
+
+        config.append(int(hex(self.SERIAL_PORT_RATE[self.serialPortRate] + \
+                              self.SERIAL_PARITY_BIT[self.loraParityBit] + \
+                              self.AIR_DATA_RATE[self.airDataRate]), 16))
+
+
+        config.append(int(hex(self.SUB_PACKET_SIZE[self.subPacketSize] + \
+                              self.CHANNEL_NOISE[self.channelNoise] + \
+                              RESERVE + \
+                              self.TX_POWER[self.txPower]), 16))
+        
+        config.append(self.channel)
+
+        config.append(int(hex(self.ENABLE_RSSI[self.enableRSSI] + 
+                              self.TRANSMISSION_MODE[self.transmissionMode] + \
+                              self.ENABLE_LBT[self.enableLBT] + \
+                              self.WOR_CONTROL[self.WORcontrol] + \
+                              self.WOR_CYCLE[self.WORcycle]), 16))
+
+        crypt_tmp = self.crypt.to_bytes(2, 'big')
+        config.append(crypt_tmp[0])
+        config.append(crypt_tmp[1])
+        
+        #print("[+] Sending new Configuration Register", flush=True)
+        #print(' '.join(['{:02X}'.format(x) for x in config]), flush=True)
+
+        self.gpio_mode('conf')
+        ser = self.openSerial()
+        
+        ser.write(bytes(config))
+        time.sleep(.1)
+        ret = ser.read_until()
+
+        ser.close()
+        self.gpio_mode('')
