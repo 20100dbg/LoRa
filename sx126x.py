@@ -5,8 +5,6 @@ import os
 
 class sx126x():
 
-    MSG_TYPE = { 'TXT' : 1, 'FILE' : 2 }
-
     SERIAL_PORT_RATE = {'1200' : 0b00000000, '2400' : 0b00100000, '4800' : 0b01000000, '9600' : 0b01100000, '19200' : 0b10000000, '38400' : 0b10100000, '57600' : 0b11000000, '115200' : 0b11100000 }
     SERIAL_PARITY_BIT = {'8N1' : 0b00000000, '8O1' : 0b00001000, '8E1' : 0b00010000 } #serial.PARITY_NONE - 8N1, serial.PARITY_ODD - 8O1, serial.PARITY_EVEN - 8E1    
     AIR_DATA_RATE = {'0.3' : 0b00000000, '1.2' : 0b00000001, '2.4' : 0b00000010, '4.8' : 0b00000011, '9.6' : 0b00000100, '19.2' : 0b00000101, '38.4' : 0b00000110, '62.5' : 0b00000111 }
@@ -60,7 +58,7 @@ class sx126x():
         self.gpio_mode("let's rock")
 
         #write config with default parameters
-        self.writeConfig()
+        #self.writeConfig()
 
 
     def gpio_mode(self, mode):
@@ -77,7 +75,7 @@ class sx126x():
             GPIO.output(self.M0, False)
             GPIO.output(self.M1, False)
 
-        time.sleep(.2)
+        time.sleep(.3)
 
 
     def openSerial(self):
@@ -92,55 +90,17 @@ class sx126x():
         ser = self.openSerial()
 
         ser.write(data)
-        time.sleep(.2)
+        time.sleep(.1)
         #ret = ser.readlines()
         ser.close()
 
 
     def sendmsg(self, data):
-        data = b'\x01' + self.logicalAddress.to_bytes(2, 'big') + data.encode()
+        data = self.logicalAddress.to_bytes(2, 'big') + data.encode()
         self.sendraw(data)
 
 
-    def sendfile(self, path):
-
-        #check file exists
-        #convert path -> filename
-
-        if not os.path.exists(path):
-            print("File not found")
-            return
-
-        filename = os.path.basename(os.path.realpath(path))
-
-        ser = self.openSerial()
-        buffer_size = int(self.subPacketSize) -11
-        #print('buffer_size :',buffer_size)
-
-        short_filename = filename[0:8].encode()
-        #print('short_filename :',short_filename)
-
-        with open(filename, 'rb') as f:
-            while True:
-
-                buffer = f.read(buffer_size)
-                #print('buffer :', buffer)
-
-                data = b'\x02' + self.logicalAddress.to_bytes(2, 'big') + short_filename + buffer
-                #print('data :', data)
-                
-                ser.write(data)
-                time.sleep(.5)
-
-                if len(buffer) < buffer_size:
-                    break
-
-        #ret = ser.readlines()
-        ser.close()
-
-
     def receive(self):
-
         ser = self.openSerial()
 
         data = ser.read_until()

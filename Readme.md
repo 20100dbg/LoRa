@@ -96,7 +96,7 @@ I wrote "my" library using [E22-900T22S User Manual](https://www.ebyte.com/en/do
 
 
 -- Adresses
-- l'adresse configurée lors de l'init est davantage celle du destinataire que celle de l'émetteur
+- en mode tranparent transmission (mode par défaut) l'adresse configurée lors de l'init est davantage celle du destinataire que celle de l'émetteur
 - pour que A envoie un message que B puisse recevoir, il faut que A et B ait la même adresse configurée !
 - problèmes : on ne sait pas de qui vient le message, cela oblige à configurer en permanence le module si on souhaite envoyer des messages à plusieurs destinataires
 - sinon, on peut utiliser l'adresse spéciale 65535 qui joue le rôle de broadcast en émission, et de monitoring en réception
@@ -121,4 +121,24 @@ I wrote "my" library using [E22-900T22S User Manual](https://www.ebyte.com/en/do
 - Il est possible d'activer 0,1 ou 2 RSSI.
 - Calcul : rssi = -1 * (256 - OCTET_RSSI)
 
+
+-- transfert de fichiers
+impossible sans l'implémentation d'un protocole de transfert type TCP
+
+-- taille des paquets
+la taille des paquets est réglable, mais les paquets semblent quand même découpés arbitrairement
+
+-- la config peut être envoyée sur les ondes ? A confirmer
+
+-- portée (non testée)
+
+
+
+
+A tester :
+- utiliser le mode fixed point transmission
+-- les trois premiers bytes envoyés sont ADDRH + ADDRL + NETID
+
+- fonction repeater
+-- si l'adresse spécifiée n'est pas celle du module repeater, il retransmet
 

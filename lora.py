@@ -3,16 +3,15 @@ import threading
 import time
 
 #MSG STRUCTURE
-#TYPE (TXT/FILE) (1bytes) - FROM (2bytes) - DATA
-
-#FILE: 
-#DATA = FILENAME (8bytes) - DATA
+#FROM (2bytes) - DATA
 
 
 def main():
 
     #initialize lora
     global lora
+
+    #lora = sx126x.sx126x(address=100, network=0, channel=18, txPower='22', enableRSSI='off'):
     lora = sx126x.sx126x(channel=18,address=100,network=0,txPower=10)
 
     #start receive thread
@@ -49,38 +48,23 @@ def handleReceive(data):
 
     #print("received :", data)
 
-    data_type = data[0]
-    data_src = int.from_bytes(data[1:3])
+    data_src = int.from_bytes(data[0:2])
     end_buffer = len(data)
     rssi = 0
 
-    if self.enableRSSI == 'on':
+    if lora.enableRSSI == 'on':
         rssi = -1 * (256 - int.from_bytes(data[-1:]))
         end_buffer = -1
-
-    if data_type == lora.MSG_TYPE['TXT']:
-        print(f'FROM {data_src} ({rssi}) : {data[3:end_buffer].decode()}')
-
-
-    elif data_type == lora.MSG_TYPE['FILE']:
-        filename = data[3:11]
-        buffer = data[11:end_buffer]
-        
-        with open(filename, 'ab') as f:
-            f.write(buffer)
+        print(f'FROM {data_src} ({rssi}) : {data[2:end_buffer].decode()}')
+    else:
+        print(f'FROM {data_src} : {data[2:end_buffer].decode()}')
 
 
 
 def handleSend(txt):
 
     tab = txt.split()
-
-    if tab[0] == 'file' or tab[0] == 'send':
-        filename = tab[1]
-        lora.sendfile(filename)
-    
-    else:
-        lora.sendmsg(txt)
+    lora.sendmsg(txt)
 
 
 if __name__ == '__main__':
