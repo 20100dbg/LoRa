@@ -19,8 +19,10 @@ class sx126x():
     WOR_CYCLE = {'500' : 0b00000000, '1000' : 0b00000001, '1500' : 0b00000010, '2000' : 0b00000011, '2500' : 0b00000100, '3000' : 0b00000101, '3500' : 0b00000110, '4000' : 0b00000111 }
 
 
-    def __init__(self, address = 100, network=0, channel=18, txPower='22', enableRSSI='off'):
+    def __init__(self, address = 100, network=0, channel=18, txPower='22', enableRSSI=False,
+                    airDataRate='2.4', repeater='none', packetSize='128', debug=False):
 
+        self.debug = debug
         self.logicalAddress = address
 
         #set default parameters
@@ -32,16 +34,27 @@ class sx126x():
         
         self.channel = int(channel) #0 - 80
         self.crypt = 0 #0 - 65535
-        self.address = 65535 #int(address) #0 - 65535
         self.network = int(network) #0 - 255
 
-        self.airDataRate ='2.4'
+        self.airDataRate =airDataRate
         self.subPacketSize ='128'
         self.channelNoise ='off'
         self.txPower = str(txPower)
-        self.enableRSSI = enableRSSI
-        self.transmissionMode ='transparent'
-        self.enableRepeater ='off'
+        self.enableRSSI = 'on' if enableRSSI else 'off'
+
+        if repeater == "server":
+            self.transmissionMode = 'fixedPoint'
+            self.address = address
+            self.enableRepeater = 'on'
+        elif repeater == "client":
+            self.transmissionMode = 'fixedPoint'
+            self.address = address
+            self.enableRepeater = 'off'
+        else: #none
+            self.transmissionMode = 'transparent'
+            self.address = 65535
+            self.enableRepeater = 'off'
+
         self.enableLBT = 'off'
         self.WORcontrol = 'transmitter'
         self.WORcycle = '2000'
@@ -55,10 +68,13 @@ class sx126x():
         GPIO.setup(self.M0, GPIO.OUT)
         GPIO.setup(self.M1, GPIO.OUT)
 
-        self.gpio_mode("let's rock")
+        #self.gpio_mode("let's rock")
+        self.writeConfig()
 
-        #write config with default parameters
-        #self.writeConfig()
+
+    def show_config(self):
+        print(f'Channel {self.channel}, address {self.logicalAddress}, network {self.network}')
+        print(f'mode {self.transmissionMode}, real address {self.address}, repeater {self.enableRepeater}')
 
 
     def gpio_mode(self, mode):
@@ -96,17 +112,28 @@ class sx126x():
 
 
     def sendmsg(self, data):
-        data = self.logicalAddress.to_bytes(2, 'big') + data.encode()
+        if self.transmissionMode == 'fixedPoint':
+            data = self.logicalAddress.to_bytes(2, 'big') + self.network.to_bytes(1, 'big') + data.encode()
+        else:
+            data = self.logicalAddress.to_bytes(2, 'big') + data.encode()
+
+        if self.debug:
+            print('[+] sending :', data)
+        
         self.sendraw(data)
 
 
     def receive(self):
         ser = self.openSerial()
 
-        data = ser.read_until()
+        data = ser.read_until(expected='')
+
         if not data:
             data = None
-        
+        else:
+            if self.debug:
+                print('[+] received',len(data),'data :', data)
+
         ser.close()
         return data
 
@@ -219,6 +246,9 @@ class sx126x():
         ser.write(bytes(config))
         time.sleep(.1)
         ret = ser.read_until()
+        
+        if ret == b'\xff\xff\xff':
+            print("ERREUR CONFIG")
 
         ser.close()
         self.gpio_mode('')
