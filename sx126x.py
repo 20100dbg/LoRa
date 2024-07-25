@@ -15,7 +15,7 @@ class sx126x():
     TRANSMISSION_MODE = {'fixedPoint' : 0b01000000, 'transparent' : 0b000000000 }
     ENABLE_REPEATER = {'off' : 0b00000000, 'on' : 0b00100000 }
     ENABLE_LBT = {'off' : 0b00000000, 'on' : 0b00010000 }
-    WOR_CONTROL = {'receiver' : 0b00001000, 'transmitter' : 0b00000000 }
+    WOR_CONTROL = {'transmitter' : 0b00001000, 'receiver' : 0b00000000 }
     WOR_CYCLE = {'500' : 0b00000000, '1000' : 0b00000001, '1500' : 0b00000010, '2000' : 0b00000011, '2500' : 0b00000100, '3000' : 0b00000101, '3500' : 0b00000110, '4000' : 0b00000111 }
 
 
@@ -105,23 +105,30 @@ class sx126x():
     def sendraw(self, data):
         ser = self.openSerial()
 
+        if self.debug:
+            print('[+] sending :', data)
+        
         ser.write(data)
         time.sleep(.1)
         #ret = ser.readlines()
         ser.close()
 
 
-    def sendmsg(self, data):
-        if self.transmissionMode == 'fixedPoint':
-            data = self.logicalAddress.to_bytes(2, 'big') + self.network.to_bytes(1, 'big') + data.encode()
-        else:
-            data = self.logicalAddress.to_bytes(2, 'big') + data.encode()
-
-        if self.debug:
-            print('[+] sending :', data)
+    def sendmsg(self, data, to=None, network=None):
+        to = to if to else self.logicalAddress
+        network = network if network else self.network
         
+        to = to.to_bytes(2, 'big')
+        network = network.to_bytes(1, 'big')
+
+        data = to + network + data.encode()
         self.sendraw(data)
 
+    """
+    def sendmsg(self, data):
+        data = self.logicalAddress.to_bytes(2, 'big') + data.encode()
+        self.sendraw(data)
+    """
 
     def receive(self):
         ser = self.openSerial()
@@ -157,7 +164,7 @@ class sx126x():
         ser = self.openSerial()
         
         ser.write(b'\xC0\xC1\xC2\xC3\x00\x02')
-        ret = ser.read_until()
+        ret = ser.read_until(expected='')
         print(ret)
         currentNoise = ret[3]
         lastReceive = ret[4]
@@ -229,6 +236,7 @@ class sx126x():
 
         config.append(int(hex(self.ENABLE_RSSI[self.enableRSSI] + 
                               self.TRANSMISSION_MODE[self.transmissionMode] + \
+                              self.ENABLE_REPEATER[self.enableRepeater] + \
                               self.ENABLE_LBT[self.enableLBT] + \
                               self.WOR_CONTROL[self.WORcontrol] + \
                               self.WOR_CYCLE[self.WORcycle]), 16))
@@ -245,8 +253,12 @@ class sx126x():
         
         ser.write(bytes(config))
         time.sleep(.1)
-        ret = ser.read_until()
+        ret = ser.read_until(expected='')
         
+        if self.debug:
+            print("[+] Config sent :", bytes(config))
+            print("[+] Config recv :", ret)
+
         if ret == b'\xff\xff\xff':
             print("ERREUR CONFIG")
 
