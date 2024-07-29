@@ -35,21 +35,21 @@ def main():
                     lora.sendmsg(tab[2], int(tab[0]), int(tab[1]))
                 else:
                     print("Format : ADDR/NETID/MSG")
-            
+
 
 def listener():
     while isRunning:
         data = lora.receive()
         if data:
             handleReceive(data)
-        time.sleep(0.1)
+        #time.sleep(0.1)
 
 
 def handleReceive(data):
 
     if lora.transmissionMode == 'transparent':
         addr = int.from_bytes(data[0:2])
-        netid = int.from_bytes(data[2:1])
+        netid = int.from_bytes(data[2:3])
         msg = data[3:]
         msg_from = f'FROM {addr}/{netid}'
     else:
@@ -90,10 +90,13 @@ if __name__ == '__main__':
     
     group3 = parser.add_argument_group('Repeater')
     group3.add_argument('-x', '--repeater', metavar='', default='none', choices=['none', 'client', 'server'], help='none, client, server')
+    group3.add_argument('-1', '--netid1', metavar='', type=int, help='0 - 255 Left Network ID')
+    group3.add_argument('-2', '--netid2', metavar='', type=int, help='0 - 255 Right Network ID')
     
     group4 = parser.add_argument_group('Info & Debug')
     group4.add_argument('-z', '--debug', default=False, action='store_true', help='Enable Debug')
     group4.add_argument('-r', '--rssi', default=False, action='store_true', help='Enable RSSI')
+    group4.add_argument('-k', '--key', metavar='', default=0, type=int, help='Crypto key')
     args = parser.parse_args()
 
     #print(msg_usage('%(prog)s'))
@@ -106,9 +109,12 @@ if __name__ == '__main__':
     
     lora = sx126x.sx126x(channel=args.channel, address=args.address, network=args.network,
                     txPower=args.power, airDataRate=args.datarate, packetSize=args.packet_size, 
-                    repeater=args.repeater, debug=args.debug, enableRSSI=args.rssi)
+                    repeater=args.repeater, debug=args.debug, enableRSSI=args.rssi,
+                    key=args.key, netid1=args.netid1, netid2=args.netid2)
 
+    print()
     lora.show_config()
+    print()
     print("Address/Network/Message")
     
     main()

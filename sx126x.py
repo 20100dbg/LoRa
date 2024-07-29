@@ -12,7 +12,7 @@ class sx126x():
     CHANNEL_NOISE = {'off' : 0b00000000, 'on' : 0b00100000 }
     TX_POWER = {'22' : 0b00000000, '17' : 0b00000001, '13' : 0b00000010, '10' : 0b00000011 }
     ENABLE_RSSI = {'off' : 0b00000000, 'on' : 0b10000000 }
-    TRANSMISSION_MODE = {'fixedPoint' : 0b01000000, 'transparent' : 0b000000000 }
+    TRANSMISSION_MODE = {'fixed' : 0b01000000, 'transparent' : 0b000000000 }
     ENABLE_REPEATER = {'off' : 0b00000000, 'on' : 0b00100000 }
     ENABLE_LBT = {'off' : 0b00000000, 'on' : 0b00010000 }
     WOR_CONTROL = {'transmitter' : 0b00001000, 'receiver' : 0b00000000 }
@@ -20,7 +20,8 @@ class sx126x():
 
 
     def __init__(self, address = 100, network=0, channel=18, txPower='22', enableRSSI=False,
-                    airDataRate='2.4', repeater='none', packetSize='128', debug=False):
+                    airDataRate='2.4', repeater='none', packetSize='128', debug=False, 
+                    key=0, netid1=0, netid2=0):
 
         self.debug = debug
         self.logicalAddress = address
@@ -32,22 +33,22 @@ class sx126x():
         self.serialParityBit = serial.PARITY_NONE
         self.loraParityBit = self.convertSerialParity(self.serialParityBit)
         
-        self.channel = int(channel) #0 - 80
-        self.crypt = 0 #0 - 65535
-        self.network = int(network) #0 - 255
+        self.channel = int(channel) # 0 - 80
+        self.key = int(key) # 0 - 65535
+        self.network = int(network) # 0 - 255
 
-        self.airDataRate =airDataRate
-        self.subPacketSize ='128'
-        self.channelNoise ='off'
+        self.airDataRate = airDataRate
+        self.subPacketSize = '128'
+        self.channelNoise = 'off'
         self.txPower = str(txPower)
         self.enableRSSI = 'on' if enableRSSI else 'off'
 
         if repeater == "server":
-            self.transmissionMode = 'fixedPoint'
-            self.address = address
+            self.transmissionMode = 'fixed'
+            self.address = self.bytes_pair_to_int(netid1, netid2)
             self.enableRepeater = 'on'
         elif repeater == "client":
-            self.transmissionMode = 'fixedPoint'
+            self.transmissionMode = 'fixed'
             self.address = address
             self.enableRepeater = 'off'
         else: #none
@@ -68,13 +69,23 @@ class sx126x():
         GPIO.setup(self.M0, GPIO.OUT)
         GPIO.setup(self.M1, GPIO.OUT)
 
-        #self.gpio_mode("let's rock")
         self.writeConfig()
 
 
+    def bytes_pair_to_int(self, b1, b2):
+        return (b1 << 8) + b2
+
+    def btohex(self, b):
+        return ' '.join(['{:02X}'.format(x) for x in b])
+
+
     def show_config(self):
-        print(f'Channel {self.channel}, address {self.logicalAddress}, network {self.network}')
+        print(f'Channel {self.channel}, address {self.logicalAddress}, network {self.network}, key {self.key}')
         print(f'mode {self.transmissionMode}, real address {self.address}, repeater {self.enableRepeater}')
+        
+        if self.enableRepeater == 'on':
+            tab = self.address.to_bytes(2, 'big')
+            print(f'netid1 {tab[0]}, netid2 {tab[1]}')
 
 
     def gpio_mode(self, mode):
@@ -91,7 +102,7 @@ class sx126x():
             GPIO.output(self.M0, False)
             GPIO.output(self.M1, False)
 
-        time.sleep(.3)
+        time.sleep(.2)
 
 
     def openSerial(self):
@@ -106,7 +117,7 @@ class sx126x():
         ser = self.openSerial()
 
         if self.debug:
-            print('[+] sending :', data)
+            print('[+] sending :', self.btohex(data))
         
         ser.write(data)
         time.sleep(.1)
@@ -115,6 +126,7 @@ class sx126x():
 
 
     def sendmsg(self, data, to=None, network=None):
+
         to = to if to else self.logicalAddress
         network = network if network else self.network
         
@@ -124,11 +136,8 @@ class sx126x():
         data = to + network + data.encode()
         self.sendraw(data)
 
-    """
-    def sendmsg(self, data):
-        data = self.logicalAddress.to_bytes(2, 'big') + data.encode()
-        self.sendraw(data)
-    """
+
+
 
     def receive(self):
         ser = self.openSerial()
@@ -139,7 +148,7 @@ class sx126x():
             data = None
         else:
             if self.debug:
-                print('[+] received',len(data),'data :', data)
+                print('[+] received',len(data),'data :', self.btohex(data))
 
         ser.close()
         return data
@@ -164,8 +173,10 @@ class sx126x():
         ser = self.openSerial()
         
         ser.write(b'\xC0\xC1\xC2\xC3\x00\x02')
-        ret = ser.read_until(expected='')
-        print(ret)
+        
+        ret = ser.read_until(expected='')        
+        #print(ret)
+
         currentNoise = ret[3]
         lastReceive = ret[4]
 
@@ -175,7 +186,7 @@ class sx126x():
 
 
     def setConfig(self, port=None, serialPortRate=None, timeout=None, serialParityBit=None,
-            channel=None,crypt=None,address=None, network=None,airDataRate=None,subPacketSize=None,
+            channel=None,key=None,address=None, network=None,airDataRate=None,subPacketSize=None,
             channelNoise=None,txPower=None,enableRSSI=None,transmissionMode=None,enableRepeater=None,
             enableLBT=None,WORcontrol=None,WORcycle=None):
 
@@ -186,7 +197,7 @@ class sx126x():
         self.loraParityBit = self.convertSerialParity(self.serialParityBit)
         
         self.channel = channel or self.channel
-        self.crypt = crypt or self.crypt
+        self.key = key or self.key
         self.address = address or self.address
         self.network = network or self.network
 
@@ -218,8 +229,6 @@ class sx126x():
         config.append(address_tmp[0])
         config.append(address_tmp[1])
 
-        #config.append(int(addrl))
-
         config.append(self.network)
 
         config.append(int(hex(self.SERIAL_PORT_RATE[self.serialPortRate] + \
@@ -241,23 +250,21 @@ class sx126x():
                               self.WOR_CONTROL[self.WORcontrol] + \
                               self.WOR_CYCLE[self.WORcycle]), 16))
 
-        crypt_tmp = self.crypt.to_bytes(2, 'big')
-        config.append(crypt_tmp[0])
-        config.append(crypt_tmp[1])
+        key_tmp = self.key.to_bytes(2, 'big')
+        config.append(key_tmp[0])
+        config.append(key_tmp[1])
         
-        #print("[+] Sending new Configuration Register", flush=True)
-        #print(' '.join(['{:02X}'.format(x) for x in config]), flush=True)
-
         self.gpio_mode('conf')
         ser = self.openSerial()
         
         ser.write(bytes(config))
         time.sleep(.1)
+
         ret = ser.read_until(expected='')
         
         if self.debug:
-            print("[+] Config sent :", bytes(config))
-            print("[+] Config recv :", ret)
+            print("[+] Config sent :", self.btohex(config))
+            print("[+] Config recv :", self.btohex(ret))
 
         if ret == b'\xff\xff\xff':
             print("ERREUR CONFIG")
