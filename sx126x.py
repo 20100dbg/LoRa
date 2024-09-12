@@ -1,7 +1,6 @@
 import RPi.GPIO as GPIO
-import time
 import serial
-import os
+import time
 
 class sx126x():
 
@@ -26,7 +25,6 @@ class sx126x():
         self.debug = debug
         self.logicalAddress = address
 
-        #set default parameters
         self.port = '/dev/ttyS0'
         self.serialPortRate = '9600'
         self.timeout = 1
@@ -38,10 +36,10 @@ class sx126x():
         self.network = int(network) # 0 - 255
 
         self.airDataRate = airDataRate
-        self.subPacketSize = '128'
-        self.channelNoise = 'off'
+        self.subPacketSize = packetSize
         self.txPower = str(txPower)
-        self.enableRSSI = 'on' if enableRSSI else 'off'
+        self.channelNoise = 'off' #current noise + last message's db on request 
+        self.enableRSSI = 'on' if enableRSSI else 'off' #this message's db appended to the message
 
         if repeater == "server":
             self.transmissionMode = 'fixed'
@@ -58,9 +56,7 @@ class sx126x():
 
         self.enableLBT = 'off'
         self.WORcontrol = 'transmitter'
-        self.WORcycle = '2000'
-        
-        
+        self.WORcycle = '2000'        
         self.M0 = 22
         self.M1 = 27
 
@@ -72,45 +68,20 @@ class sx126x():
         self.writeConfig()
 
 
-    def bytes_pair_to_int(self, b1, b2):
-        return (b1 << 8) + b2
-
-    def btohex(self, b):
-        return ' '.join(['{:02X}'.format(x) for x in b])
-
-
-    def show_config(self):
-        print(f'Channel {self.channel}, address {self.logicalAddress}, network {self.network}, key {self.key}')
-        print(f'mode {self.transmissionMode}, real address {self.address}, repeater {self.enableRepeater}')
-        
-        if self.enableRepeater == 'on':
-            tab = self.address.to_bytes(2, 'big')
-            print(f'netid1 {tab[0]}, netid2 {tab[1]}')
-
-
-    def gpio_mode(self, mode):
-        if mode == 'conf':
-            GPIO.output(self.M0, False)
-            GPIO.output(self.M1, True)
-        elif mode == 'wor':
-            GPIO.output(self.M0, True)
-            GPIO.output(self.M1, False)
-        elif mode == 'sleep':
-            GPIO.output(self.M0, True)
-            GPIO.output(self.M1, True)
-        else:
-            GPIO.output(self.M0, False)
-            GPIO.output(self.M1, False)
-
-        time.sleep(.2)
-
-
     def openSerial(self):
         ser = serial.Serial(port=self.port, baudrate=self.serialPortRate, \
                     parity=self.serialParityBit, stopbits=serial.STOPBITS_ONE,
                     bytesize=serial.EIGHTBITS, timeout=self.timeout)
 
         return ser
+
+
+    def bytes_pair_to_int(self, b1, b2):
+        return (b1 << 8) + b2
+
+
+    def btohex(self, b):
+        return ' '.join(['{:02X}'.format(x) for x in b])        
 
 
     def sendraw(self, data):
@@ -120,8 +91,7 @@ class sx126x():
             print('[+] sending :', self.btohex(data))
         
         ser.write(data)
-        time.sleep(.1)
-        #ret = ser.readlines()
+        time.sleep(0.05)
         ser.close()
 
 
@@ -138,7 +108,6 @@ class sx126x():
 
 
 
-
     def receive(self):
         ser = self.openSerial()
 
@@ -146,9 +115,8 @@ class sx126x():
 
         if not data:
             data = None
-        else:
-            if self.debug:
-                print('[+] received',len(data),'data :', self.btohex(data))
+        elif self.debug:
+            print('[+] received',len(data),'data :', self.btohex(data))
 
         ser.close()
         return data
@@ -171,7 +139,6 @@ class sx126x():
             return
 
         ser = self.openSerial()
-        
         ser.write(b'\xC0\xC1\xC2\xC3\x00\x02')
         
         ret = ser.read_until(expected='')        
@@ -183,6 +150,27 @@ class sx126x():
         ser.close()
         return currentNoise, lastReceive
 
+
+    def gpio_mode(self, mode):
+        if mode == 'conf':
+            GPIO.output(self.M0, False)
+            GPIO.output(self.M1, True)
+        elif mode == 'wor':
+            GPIO.output(self.M0, True)
+            GPIO.output(self.M1, False)
+        elif mode == 'sleep':
+            GPIO.output(self.M0, True)
+            GPIO.output(self.M1, True)
+        else:
+            GPIO.output(self.M0, False)
+            GPIO.output(self.M1, False)
+
+        time.sleep(0.1)
+
+
+    def show_config(self):
+        print(f'Channel {self.channel}, address {self.logicalAddress}, network {self.network}, key {self.key}')
+        print(f'mode {self.transmissionMode}, real address {self.address} ({self.address.to_bytes(2, 'big')}), repeater {self.enableRepeater}')
 
 
     def setConfig(self, port=None, serialPortRate=None, timeout=None, serialParityBit=None,
@@ -216,13 +204,12 @@ class sx126x():
 
 
     def writeConfig(self):
-
         #factory reset
         #C0 00 09 12 34 00 61
 
         RESERVE = 0b00000000
 
-        #C0 = config, 00 = start address, 09 : length
+        #C0 = config, 00 = start address, 09 = length
         config = bytearray(b'\xC0\x00\x09')
 
         address_tmp = self.address.to_bytes(2, 'big')
@@ -258,7 +245,7 @@ class sx126x():
         ser = self.openSerial()
         
         ser.write(bytes(config))
-        time.sleep(.1)
+        time.sleep(0.05)
 
         ret = ser.read_until(expected='')
         

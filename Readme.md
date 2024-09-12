@@ -128,28 +128,23 @@ impossible sans l'implémentation d'un protocole de transfert type TCP
 -- taille des paquets
 la taille des paquets est réglable, mais les paquets semblent quand même découpés arbitrairement
 
--- portée (non testée)
-
 
 - fixed point
 -- les modules ont des adresses différentes
--- les modules doivent avoir en configuration le même network
+-- les modules doivent avoir le même network
 -- si les modules n'ont pas le même network, on peut passer par un relais/répéteur
 -- ils peuvent avoir la même channel ou un channel différent
 -- le message commence par 3 octets : ADDRH+ADDRL+CHANNEL
--- visiblement la puce change de frq pour l'envoi du msg
+-- la puce change momentanément de frq pour l'envoi du msg
 
-
-
-A tester :
 
 - fonction repeater
--- de préférence en mode fixed Point (pas obligatoire ?)
--- les modules ont des adresses différentes et des network différents
+-- en mode fixed Point (ne semble pas obligatoire mais largement conseillé)
+-- les clients doivent avoir la même adresse et des network différents
+-- sur les clients, le network doit être égal à la channel
+-- le message commence par 3 octets : ADDRH+ADDRL+CHANNEL
+-- la puce change momentanément de frq pour l'envoi du msg
 -- le module repeater a en ADDRH le NETID de gauche et en ADDRL le NETID de droite (et pas de NETID)
-
--- checker si la channel doit être la même
-
-
-- fonction sécurité
+-- sur le repéteur, la channel doit être celle d'écoute. 
+-- le message ne peut aller que dans un sens
 
