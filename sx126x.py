@@ -56,7 +56,7 @@ class sx126x():
 
         self.enableLBT = 'off'
         self.WORcontrol = 'transmitter'
-        self.WORcycle = '2000'        
+        self.WORcycle = '2000'
         self.M0 = 22
         self.M1 = 27
 
@@ -91,7 +91,7 @@ class sx126x():
             print('[+] sending :', self.btohex(data))
         
         ser.write(data)
-        time.sleep(0.05)
+        time.sleep(0.01)
         ser.close()
 
 
@@ -165,12 +165,13 @@ class sx126x():
             GPIO.output(self.M0, False)
             GPIO.output(self.M1, False)
 
-        time.sleep(0.1)
+        time.sleep(0.05)
 
 
     def show_config(self):
         print(f'Channel {self.channel}, address {self.logicalAddress}, network {self.network}, key {self.key}')
-        print(f'mode {self.transmissionMode}, real address {self.address} ({self.address.to_bytes(2, 'big')}), repeater {self.enableRepeater}')
+        x = self.address.to_bytes(2, 'big')
+        print(f'mode {self.transmissionMode}, real address {self.address} ({x}), repeater {self.enableRepeater}')
 
 
     def setConfig(self, port=None, serialPortRate=None, timeout=None, serialParityBit=None,
