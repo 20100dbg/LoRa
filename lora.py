@@ -86,7 +86,7 @@ if __name__ == '__main__':
     group2 = parser.add_argument_group('Performance settings')
     group2.add_argument('-p', '--power', metavar='', default='22', choices=['22','17','13','10'], help='22,17,13,10')
     group2.add_argument('-d', '--datarate', metavar='', default='2.4', choices=['0.3','1.2','2.4','4.8','9.6','19.2','38.4','62.5'], help='0.3,1.2,2.4,4.8,9.6,19.2,38.4,62.5')
-    group2.add_argument('-s', '--packet-size', metavar='', default=128, choices=['240','128','64','32'], help='240,128,64,32')
+    group2.add_argument('-s', '--packet-size', metavar='', default='128', choices=['240','128','64','32'], help='240,128,64,32')
     
     group3 = parser.add_argument_group('Repeater')
     group3.add_argument('-x', '--repeater', metavar='', default='none', choices=['none', 'client', 'server'], help='none, client, server')

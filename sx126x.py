@@ -219,24 +219,24 @@ class sx126x():
 
         config.append(self.network)
 
-        config.append(int(hex(self.SERIAL_PORT_RATE[self.serialPortRate] + \
-                              self.SERIAL_PARITY_BIT[self.loraParityBit] + \
-                              self.AIR_DATA_RATE[self.airDataRate]), 16))
+        config.append(self.SERIAL_PORT_RATE[self.serialPortRate] + \
+                      self.SERIAL_PARITY_BIT[self.loraParityBit] + \
+                      self.AIR_DATA_RATE[self.airDataRate])
 
 
-        config.append(int(hex(self.SUB_PACKET_SIZE[self.subPacketSize] + \
-                              self.CHANNEL_NOISE[self.channelNoise] + \
-                              RESERVE + \
-                              self.TX_POWER[self.txPower]), 16))
+        config.append(self.SUB_PACKET_SIZE[self.subPacketSize] + \
+                      self.CHANNEL_NOISE[self.channelNoise] + \
+                      RESERVE + \
+                      self.TX_POWER[self.txPower])
         
         config.append(self.channel)
 
-        config.append(int(hex(self.ENABLE_RSSI[self.enableRSSI] + 
-                              self.TRANSMISSION_MODE[self.transmissionMode] + \
-                              self.ENABLE_REPEATER[self.enableRepeater] + \
-                              self.ENABLE_LBT[self.enableLBT] + \
-                              self.WOR_CONTROL[self.WORcontrol] + \
-                              self.WOR_CYCLE[self.WORcycle]), 16))
+        config.append(self.ENABLE_RSSI[self.enableRSSI] + 
+                      self.TRANSMISSION_MODE[self.transmissionMode] + \
+                      self.ENABLE_REPEATER[self.enableRepeater] + \
+                      self.ENABLE_LBT[self.enableLBT] + \
+                      self.WOR_CONTROL[self.WORcontrol] + \
+                      self.WOR_CYCLE[self.WORcycle])
 
         key_tmp = self.key.to_bytes(2, 'big')
         config.append(key_tmp[0])

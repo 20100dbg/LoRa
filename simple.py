@@ -6,7 +6,7 @@ def listener():
     while isRunning:
         data = lora.receive()
         if data:
-            print(data.decode())
+            print("> " + data.decode())
         time.sleep(0.1)
 
 
@@ -20,7 +20,7 @@ t_receive.start()
 
 #loop for sending messages
 while True:
-    txt = input("> ")
+    txt = input()
 
     #if exit, kill thread and break loop
     if txt == "exit":
