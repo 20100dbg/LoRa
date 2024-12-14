@@ -14,7 +14,7 @@
 - Change both yellow jumpers from position 1 to position 2
 
 You should have this result :
-![LoRa set up](https://github.com/20100dbg/lora/blob/master/lora.jpg?raw=true)
+![LoRa set up](https://github.com/20100dbg/lora/blob/master/hat_setup.jpg?raw=true)
 
 
 #### Setup network (static IP address)
