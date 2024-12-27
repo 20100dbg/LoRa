@@ -1,3 +1,10 @@
+#!/usr/bin/env python3
+
+"""
+This is an example of a as simple as possible LoRa app.
+It allows to send and receive text over LoRa.
+"""
+
 import sx126x
 import threading
 import time
@@ -11,7 +18,8 @@ def listener():
 
 
 #initialize lora
-lora = sx126x.sx126x(channel=18,address=100,network=0)
+#lora = sx126x.init_config(channel=18,address=100,network=0)
+lora = sx126x.init()
 
 #start receive thread
 isRunning = True
@@ -29,4 +37,4 @@ while True:
         break
 
     elif txt:
-        lora.sendraw(txt.encode())
+        lora.send_string(txt)

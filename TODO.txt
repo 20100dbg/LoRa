@@ -1,1 +1,0 @@
-- allow user-defined ports in open_serial()

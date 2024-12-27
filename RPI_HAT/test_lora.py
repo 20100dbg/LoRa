@@ -1,31 +1,52 @@
-import argparse
 import sx126x
 import threading
 import time
+
+import argparse
 import sys
 from signal import signal, SIGINT
 
+
+class LoraClass(object):
+
+    def __init__(self, **kwargs):
+        self.isRunning = True
+        self.lora = sx126x.init_config(**kwargs)
+
+        self.t_receive = threading.Thread(target=self.__listener)
+        self.t_receive.start()
+
+
+    def setBot(self, active):
+        self.isBot = active
+
+
+    def __listener(self):
+        while self.isRunning:
+
+            data = self.lora.receive()
+            if data:
+                print(f"> {bytes_to_str(data)}")
+                print(f"> {data}")
+
+                if self.isBot:
+                    lora.send_bytes(data)
+
+            time.sleep(0.01)
+
+
+    def send(self, txt):
+        self.lora.send_string(txt)
+
+    def close(self):
+        print("Closing...")
+        self.isRunning = False;
+        self.t_receive.join()
+
+
+
 def handler(signal_received, frame):
-    print("Caught Ctrl+C")
-    close()
-
-def close():
-    global isRunning
-    isRunning = False
-    t_receive.join()
-    exit(0)
-
-def listener():
-    while isRunning:
-        data = lora.receive()
-        if data:
-            print(f"> {bytes_to_str(data)}")
-            print(f"> {data}")
-
-            if isBot:
-                lora.send_bytes(data)
-
-        time.sleep(0.01)
+    lora.close()
 
 def bytes_to_str(arr):
     return ' '.join(['{:02X}'.format(b) for b in arr])
@@ -72,34 +93,25 @@ group5.add_argument('-rssi', '--rssi', default=False, action='store_true', help=
 group5.add_argument('-k', '--key', metavar='', default=0, type=int, help='Crypto key')
 args = parser.parse_args()
 
-"""
-if len(sys.argv) == 1:
-    parser.print_help()
-    print(msg_usage(sys.argv[0]))
-    exit()
-"""
-global lora
-lora = sx126x.sx126x()
 
-lora.set_config(channel=args.channel, address=args.address, network=args.network,
+lora = LoraClass(channel=args.channel, address=args.address, network=args.network,
                 tx_power=args.power, air_data_rate=args.datarate, sub_packet_size=args.packet_size, 
                 repeater=args.repeater, debug=args.debug, enable_rssi=args.rssi,
                 key=args.key, netid1=args.netid1, netid2=args.netid2)
+
+lora.setBot(args.bot)
 
 if args.debug:
     print()
     lora.show_config()
 print()
 
-isBot = False
-isRunning = True
-t_receive = threading.Thread(target=listener)
-t_receive.start()
 
-while isRunning:
-    msg = input(">")
+while True:
+    msg = input()
+
     if msg == 'exit':
-        close()
+        lora.close()
     elif msg:
         if args.hex:
             msg = str_hex_to_bytes(msg)

@@ -26,60 +26,72 @@ class sx126x():
     # Init : the module is reading the chip current settings and accordingly fill local variables
     #
     
-    #self, address=100, network=0, channel=18, tx_power=22, enable_rssi=False,
-    #air_data_rate=2.4, repeater='none', sub_packet_size=128, debug=False, 
-    #key=0, netid1=0, netid2=0):
+    def __init__(self, write_config=False):
 
-    def __init__(self):
+        self.__set_config_serial()
+        self.__serial = self.__open_serial()
+        self.__debug = True
 
-        self.set_config_serial()
-        self.serial = self.open_serial()
-        self.debug = True
+        self.__M0 = LED("GPIO22")
+        self.__M1 = LED("GPIO27")
 
-        self.M0 = LED("GPIO22")
-        self.M1 = LED("GPIO27")
+        if not write_config:
+            ret = self.read_config()
+            self.registers_to_variables(ret)
 
-        ret = self.read_config()
-        arr = self.btohex(ret)
 
-        #self.registers_to_variables(arr)
-        #self.write_config()
+    @classmethod
+    def init_config(cls, **kwargs):
+
+        cls(write_config=True)
+        self.set_config(**kwargs)
+        self.write_config()
+
+    @classmethod
+    def init(cls):
+
+        cls(write_config=False)
+
 
 
     #
     # Serial
     #
 
-    #rpi 5 : 
-
-    def set_config_serial(self, port=None, serial_port_rate=9600,
+    def __set_config_serial(self, port=None, serial_port_rate=9600,
                             timeout=1, serial_parity_bit=serial.PARITY_NONE):
-        self.port = port
-        self.serial_port_rate = serial_port_rate
-        self.timeout = timeout
-        self.serial_parity_bit = serial_parity_bit
-        self.lora_parity_bit = self.convert_serial_parity(self.serial_parity_bit)
+        self.__port = port
+        self.__serial_port_rate = serial_port_rate
+        self.__timeout = timeout
+        self.__serial_parity_bit = serial_parity_bit
+        self.__lora_parity_bit = self.__convert_serial_parity(self.__serial_parity_bit)
 
 
-    def open_serial(self):
+    # Tries to open serial. /dev/ttyS0 works for Pi until 4. /dev/ttyAMA0 works for Pi from 5
+
+    def __open_serial(self):
         
         ports = ['/dev/ttyS0', '/dev/ttyAMA0']
 
         for p in ports:
             try:
-                return serial.Serial(port=p, baudrate=self.serial_port_rate,
-                    parity=self.serial_parity_bit, stopbits=serial.STOPBITS_ONE,
-                    bytesize=serial.EIGHTBITS, timeout=self.timeout)
+                return serial.Serial(port=p, baudrate=self.__serial_port_rate,
+                    parity=self.__serial_parity_bit, stopbits=serial.STOPBITS_ONE,
+                    bytesize=serial.EIGHTBITS, timeout=self.__timeout)
 
             except Exception as e:
                 pass
 
+        print("[-] Couldn't found serial")
+
         return None
 
-    def __exit__(self, exc_type, exc_value, traceback):
-        self.serial.close()
 
-    def convert_serial_parity(self,parity):
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.close()
+
+
+    def __convert_serial_parity(self,parity):
         if parity == serial.PARITY_ODD:
             return "8O1"
         elif parity == serial.PARITY_EVEN:
@@ -92,10 +104,14 @@ class sx126x():
     # Bytes manipulation
     #
 
-    def bytes_pair_to_int(self, b1, b2):
+
+    #Create a 16bit integer from two 8bit integers. Useful to get two numbers in a single register
+    def __bytes_pair_to_int(self, b1, b2):
         return (b1 << 8) + b2
 
-    def btohex(self, b):
+
+    #Get bytes to proper hex notation
+    def __btohex(self, b):
         return ' '.join(['{:02X}'.format(x) for x in b])        
 
 
@@ -109,12 +125,13 @@ class sx126x():
             print("[!] Data parameter must be bytes")
             return
 
-        if self.debug:
-            print(f'[+] SENDING {self.btohex(data)}')
+        if self.__debug:
+            print(f'[+] SENDING {self.__btohex(data)}')
             print(f'[+] SENDING {data}')
         
-        self.serial.write(data)
+        self.__serial.write(data)
         time.sleep(0.01)
+
 
     def send_string(self, data):
 
@@ -124,15 +141,16 @@ class sx126x():
 
         self.send_bytes(data.encode())
 
+
     def receive(self):
 
-        data = self.serial.read_until(expected='')
+        data = self.__serial.read_until(expected='')
 
         if not data:
             data = None
-        elif self.debug:
+        elif self.__debug:
             print(f'[+] RECEIVED {len(data)} bytes')
-            print(f'[+] {self.btohex(data)}')
+            print(f'[+] {self.__btohex(data)}')
             print(f'[+] {data}')
 
         return data
@@ -142,19 +160,20 @@ class sx126x():
     # LoRa config
     #
 
-    def set_mode(self, mode):
+    #Set the LoRa HAT mode from software instead using the card's jumpers 
+    def __set_mode(self, mode):
         if mode == 'conf':
-            self.M0.off()
-            self.M1.on()
+            self.__M0.off()
+            self.__M1.on()
         elif mode == 'wor':
-            self.M0.on()
-            self.M1.off()
+            self.__M0.on()
+            self.__M1.off()
         elif mode == 'sleep':
-            self.M0.on()
-            self.M1.on()
-        else:
-            self.M0.off()
-            self.M1.off()
+            self.__M0.on()
+            self.__M1.on()
+        else: #transmission mode
+            self.__M0.off()
+            self.__M1.off()
 
         time.sleep(0.1)
 
@@ -165,6 +184,7 @@ class sx126x():
         print(f'[+] Mode {self.transmission_mode}, real address {self.address} ({x}), repeater {self.enable_repeater}')
 
 
+    #Update class internals variables. This method DOES NOT update chip's registers
     def set_config(self, address=100, network=0, channel=18, tx_power=22, enable_rssi=False,
                     air_data_rate=2.4, sub_packet_size=240, key=0, 
                     repeater='none', netid1=0, netid2=0, debug=False):
@@ -185,7 +205,7 @@ class sx126x():
 
         if repeater == "server":
             self.transmission_mode = 'fixed'
-            self.address = self.bytes_pair_to_int(netid1, netid2)
+            self.address = self.__bytes_pair_to_int(netid1, netid2)
             self.enable_repeater = 'enabled'
         elif repeater == "client":
             self.transmission_mode = 'fixed'
@@ -199,20 +219,21 @@ class sx126x():
 
     def factory_reset(self):
         config = bytearray(b'\xC0\x00\x09\x12\x34\x00\x61')
-        self.send_config(bytes(config))
+        ret = self.send_config(bytes(config))
+        return ret
 
 
     def read_config(self):
         config = bytearray(b'\xC1\x00\x09')    
         ret = self.send_config(bytes(config))
-        return ret
+        return self.config_bytes_to_arr(arr)
 
 
-    def registers_to_variables(self, arr):
+    def config_bytes_to_arr(self, arr):
 
         addrh = arr[0]
         addrl = arr[1]
-        addr = bytes_pair_to_int(addrh, addrl)
+        addr = __bytes_pair_to_int(addrh, addrl)
         netid = arr[2]
         tmp = f'{arr[3]:0>8b}'
         serial_port_rate = [k for k, v in SERIAL_PORT_RATE.items() if v == int(tmp[:3], 2) << 5][0]
@@ -232,15 +253,14 @@ class sx126x():
         wor_cycle = [k for k, v in WOR_CYCLE.items() if v == int(tmp[5:], 2)][0]
         crypth = arr[7]
         cryptl = arr[8]
-        crypt = bytes_pair_to_int(crypth, cryptl)
+        crypt = __bytes_pair_to_int(crypth, cryptl)
 
         return [addr, netid, serial_port_rate, serial_parity_bit, air_data_rate,
                 sub_packet_size, channel_noise, tx_power, channel, enable_rssi, transmission_mode,
                 enable_repeater, enable_lbt, wor_mode, wor_cycle, crypt]
 
 
-    def xxx(self,arr):
-        arr = self.registers_to_variables(arr)
+    def registers_to_variables(self, arr):
         self.set_config(arr[0],arr[1],arr[2],arr[3],arr[4],arr[5],arr[6],arr[7],arr[8],arr[9],
                         arr[10],arr[11],arr[12],arr[13],arr[14],arr[15],arr[16])
 
@@ -285,21 +305,21 @@ class sx126x():
 
 
     def send_config(self, data):
-        self.set_mode('conf')
+        self.__set_mode('conf')
         
-        self.serial.write(data)
+        self.__serial.write(data)
         time.sleep(0.5)
 
-        ret = self.serial.read_until(expected='')
+        ret = self.__serial.read_until(expected='')
         
-        if self.debug:
-            print(f"[+] Config sent {self.btohex(data)}")
-            print(f"[+] Config recv {self.btohex(ret)}")
+        if self.__debug:
+            print(f"[+] Config sent {self.__btohex(data)}")
+            print(f"[+] Config recv {self.__btohex(ret)}")
 
         if ret == b'\xff\xff\xff':
             print("[-] CONFIG ERROR")
 
-        self.set_mode('')
+        self.__set_mode('')
         return ret
 
     #
@@ -311,9 +331,9 @@ class sx126x():
         if self.channel_noise == 'disabled':
             return
 
-        self.serial.write(b'\xC0\xC1\xC2\xC3\x00\x02')
+        self.__serial.write(b'\xC0\xC1\xC2\xC3\x00\x02')
         
-        ret = self.serial.read_until(expected='')        
+        ret = self.__serial.read_until(expected='')        
 
         currentNoise = ret[3]
         lastReceive = ret[4]
@@ -327,3 +347,6 @@ class sx126x():
     def str_hex_to_bytes(self, txt):
         txt = txt.replace(' ', '')
         return bytes.fromhex(txt)
+
+    def close(self):
+        self.__serial.close()
