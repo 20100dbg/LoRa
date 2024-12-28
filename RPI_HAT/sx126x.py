@@ -26,8 +26,9 @@ class sx126x():
     # Init : the module is reading the chip current settings and accordingly fill local variables
     #
     
-    def __init__(self, write_config=False):
-
+    def __init__(self):
+        """ Constructor """
+        
         self.__set_config_serial()
         self.__serial = self.__open_serial()
         self.__debug = True
@@ -35,22 +36,30 @@ class sx126x():
         self.__M0 = LED("GPIO22")
         self.__M1 = LED("GPIO27")
 
-        if not write_config:
-            ret = self.read_config()
-            self.registers_to_variables(ret)
+        checkvar = "_" + __class__.__name__ + "__write_config"
+        if not checkvar in locals() or not self.__write_config:
+            arr = self.read_config()
+
+            #Fill class variables with config currently applied to chip
+            self.set_config(address=arr[0], network=arr[1], channel=arr[8], tx_power=arr[7], enable_rssi=arr[9],
+                    air_data_rate=arr[4], sub_packet_size=arr[5], key=0, 
+                    repeater='none', netid1=0, netid2=0)
 
 
     @classmethod
     def init_config(cls, **kwargs):
-
-        cls(write_config=True)
+        """ Init chip with config """
+        self.__write_config = True
+        cls()
         self.set_config(**kwargs)
         self.write_config()
 
     @classmethod
     def init(cls):
+        """ Init chip without config """
 
-        cls(write_config=False)
+        self.__write_config = False
+        cls()
 
 
 
@@ -60,6 +69,8 @@ class sx126x():
 
     def __set_config_serial(self, port=None, serial_port_rate=9600,
                             timeout=1, serial_parity_bit=serial.PARITY_NONE):
+        """ Set serial related class variables """
+
         self.__port = port
         self.__serial_port_rate = serial_port_rate
         self.__timeout = timeout
@@ -70,6 +81,7 @@ class sx126x():
     # Tries to open serial. /dev/ttyS0 works for Pi until 4. /dev/ttyAMA0 works for Pi from 5
 
     def __open_serial(self):
+        """ Tries to open serial port. Will try ttyS0 and AMA0. Return serial variable or None if failed """
         
         ports = ['/dev/ttyS0', '/dev/ttyAMA0']
 
@@ -105,13 +117,13 @@ class sx126x():
     #
 
 
-    #Create a 16bit integer from two 8bit integers. Useful to get two numbers in a single register
     def __bytes_pair_to_int(self, b1, b2):
+        """ Create a 16bit integer from two 8bit integers. Useful to get two numbers in a single register """
         return (b1 << 8) + b2
 
 
-    #Get bytes to proper hex notation
     def __btohex(self, b):
+        """ Get bytes to proper hex notation """
         return ' '.join(['{:02X}'.format(x) for x in b])        
 
 
@@ -120,6 +132,7 @@ class sx126x():
     #
 
     def send_bytes(self, data):
+        """ Send bytes through serial. Check if data is bytes """
         
         if not isinstance(data, bytes):
             print("[!] Data parameter must be bytes")
@@ -134,6 +147,7 @@ class sx126x():
 
 
     def send_string(self, data):
+        """ Send string through serial. Check if data is string and .encode() it """
 
         if not isinstance(data, str):
             print("[!] Data parameter must be str")
@@ -143,6 +157,7 @@ class sx126x():
 
 
     def receive(self):
+        """ Check if data is received """
 
         data = self.__serial.read_until(expected='')
 
@@ -160,8 +175,8 @@ class sx126x():
     # LoRa config
     #
 
-    #Set the LoRa HAT mode from software instead using the card's jumpers 
     def __set_mode(self, mode):
+        """ Set the LoRa HAT mode from software instead using the card's jumpers """
         if mode == 'conf':
             self.__M0.off()
             self.__M1.on()
@@ -179,15 +194,16 @@ class sx126x():
 
 
     def show_config(self):
+        """ Print some useful config variables to help debug """
         print(f'[+] Channel {self.channel}, address {self.logicalAddress}, network {self.network}, key {self.key}')
         x = self.address.to_bytes(2, 'big')
         print(f'[+] Mode {self.transmission_mode}, real address {self.address} ({x}), repeater {self.enable_repeater}')
 
 
-    #Update class internals variables. This method DOES NOT update chip's registers
     def set_config(self, address=100, network=0, channel=18, tx_power=22, enable_rssi=False,
                     air_data_rate=2.4, sub_packet_size=240, key=0, 
                     repeater='none', netid1=0, netid2=0, debug=False):
+        """ Update class internals variables. This method DOES NOT update chip's registers """
         
         self.channel = channel
         self.key = key
@@ -218,18 +234,21 @@ class sx126x():
 
 
     def factory_reset(self):
+        """ Request factory reset to the chip. NOT TESTED YET """
         config = bytearray(b'\xC0\x00\x09\x12\x34\x00\x61')
         ret = self.send_config(bytes(config))
         return ret
 
 
     def read_config(self):
+        """ Request config read to the chip. Returns refined array containing human readable values """
         config = bytearray(b'\xC1\x00\x09')    
         ret = self.send_config(bytes(config))
         return self.config_bytes_to_arr(arr)
 
 
     def config_bytes_to_arr(self, arr):
+        """ Transform byte array to array of human readable values """
 
         addrh = arr[0]
         addrl = arr[1]
@@ -260,12 +279,9 @@ class sx126x():
                 enable_repeater, enable_lbt, wor_mode, wor_cycle, crypt]
 
 
-    def registers_to_variables(self, arr):
-        self.set_config(arr[0],arr[1],arr[2],arr[3],arr[4],arr[5],arr[6],arr[7],arr[8],arr[9],
-                        arr[10],arr[11],arr[12],arr[13],arr[14],arr[15],arr[16])
-
 
     def write_config(self):
+        """ Write current class variables to chip's registers """
 
         RESERVE = 0b00000000
 
@@ -305,6 +321,8 @@ class sx126x():
 
 
     def send_config(self, data):
+        """ Send bytes to chip and returns chip's response """
+
         self.__set_mode('conf')
         
         self.__serial.write(data)
@@ -316,8 +334,8 @@ class sx126x():
             print(f"[+] Config sent {self.__btohex(data)}")
             print(f"[+] Config recv {self.__btohex(ret)}")
 
-        if ret == b'\xff\xff\xff':
-            print("[-] CONFIG ERROR")
+            if ret == b'\xff\xff\xff':
+                print("[-] CONFIG ERROR")
 
         self.__set_mode('')
         return ret
@@ -327,6 +345,7 @@ class sx126x():
     #
 
     def getRSSI(self):
+        """ Send bytes to chip and returns chip's response """
         
         if self.channel_noise == 'disabled':
             return
@@ -345,6 +364,7 @@ class sx126x():
     #
 
     def str_hex_to_bytes(self, txt):
+        """ Transform hex string to bytes """
         txt = txt.replace(' ', '')
         return bytes.fromhex(txt)
 
