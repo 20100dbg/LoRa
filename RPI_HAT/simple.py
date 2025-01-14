@@ -18,23 +18,26 @@ def listener():
 
 
 #initialize lora
-#lora = sx126x.init_config(channel=18,address=100,network=0)
-lora = sx126x.init()
+#lora = sx126x.sx126x(channel=18,address=100,network=0)
+lora = sx126x.sx126x()
 
 #start receive thread
-isRunning = True
 t_receive = threading.Thread(target=listener)
 t_receive.start()
 
 #loop for sending messages
 while True:
-    txt = input()
+    try:
+        txt = input()
+    except KeyboarInterrupt:
+        break
 
     #if exit, kill thread and break loop
     if txt == "exit":
-        isRunning = False
-        t_receive.join()
         break
 
     elif txt:
         lora.send_string(txt)
+
+t_receive.join()
+lora.close()

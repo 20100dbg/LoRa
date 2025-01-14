@@ -269,5 +269,9 @@ elif args.hex:
         args.hex = ''.join(args.hex)
 
     cmd = str_hex_to_bytes(args.hex)
+
+    if cmd[0:3] == b'\xC1\x00\x09':
+        cmd = cmd[3:]
+
     config = registers_to_variables(cmd)
     show_config_str(config)
