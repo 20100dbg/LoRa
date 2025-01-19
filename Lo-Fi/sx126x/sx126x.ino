@@ -1,20 +1,11 @@
-#include "conf.h"
-//#define lora Serial2
+#include "sx126x.h"
+//#define mySerial Serial2
+//HardwareSerial
+//SoftwareSerial
 
-class sx126x
-{
-  private:
-    lora Serial2;
+sx126x::sx126x() {
 
-    void set_mode(int mode);
-    
-  public:
-    void setup();
-};
- 
-// Définition des méthodes.
-void sx126x::setup()
-{
+  //#define lora Serial2
   Serial.begin(115200);
   lora.begin(9600, SERIAL_8N1, 18, 17); //9600 mandatory
 
@@ -30,7 +21,7 @@ void sx126x::setup()
 ///////////
 
 
-void set_mode(int mode) {
+void sx126x::set_mode(int mode) {
   
   if (mode == MODE_CONF) {
     digitalWrite(M0, LOW);
@@ -51,7 +42,7 @@ void set_mode(int mode) {
   delay(50);
 }
 
-void config(byte* data) {
+void sx126x::config(char* data) {
   set_mode(MODE_CONF);
   
   lora.write((byte*)&data, sizeof(data));
@@ -61,14 +52,14 @@ void config(byte* data) {
 }
 
 
-byte* set_config(int addrh, int addrl, int netid,
+void sx126x::set_config(int addrh, int addrl, int netid,
                 int serial_port_rate, int serial_parity_bit, int air_data_rate,
                 int sub_packet_size, int channel_noise, int tx_power, 
                 int channel, int enable_rssi, int transmission_mode, 
                 int enable_repeater, int enable_lbt,
                 int wor_control, int wor_cycle, int crypth, int cryptl) {
 
-  byte settings[12] = {0xC0, 0x00, 0x09};
+  char settings[12] = {0xC0, 0x00, 0x09};
   int reserve = 0;
 
   settings[3] = addrh;
@@ -82,17 +73,17 @@ byte* set_config(int addrh, int addrl, int netid,
   settings[10] = crypth;
   settings[11] = cryptl;
 
-  return settings;
+  //write registers
 }
 
-void read_config()
+void sx126x::read_config()
 {
   char data[] = {0xC1, 0x00, 0x09};
   send_config(data, sizeof(data));
 }
 
 
-void send_config(char *data, int count)
+void sx126x::send_config(char *data, int count)
 {
   set_mode(MODE_CONF);
   delay(100);
@@ -103,7 +94,7 @@ void send_config(char *data, int count)
   delay(100);
 
   char buffer[200];
-  count = receive(&buffer);
+  count = receive(buffer);
 
   Serial.println("Reading : ");
   print_hex(buffer, count);
@@ -112,7 +103,7 @@ void send_config(char *data, int count)
 }
 
 
-void print_hex(char* buffer, int count) {
+void sx126x::print_hex(char* buffer, int count) {
   char txt[2];
 
   for (int i = 0; i < count; ++i)
@@ -125,22 +116,24 @@ void print_hex(char* buffer, int count) {
 }
 
 //send bytes & send string ?
-void send(char* buffer, int count) {
+void sx126x::send(char* buffer, int count) {
 
   //this
   lora.write(buffer, count);
 
   //or that
-  lora.write((byte*)&data, sizeof(data));
+  //lora.write((byte*)&data, sizeof(data));
 
   //always
   delay(10);
 }
 
-int receive(char* buffer) {
+int sx126x::receive(char* buffer) {
 
   int count = 0;
-  char buffer[200];
+
+  //char buffer[200];
+  //char* buffer = malloc(200 * sizeof(char));
   
   while (lora.available())
   {
@@ -151,19 +144,22 @@ int receive(char* buffer) {
   return count;
 }
 
-int getRSSI() {
+int sx126x::getRSSI() {
   char data[] = {0xC0, 0xC1, 0xC2, 0xC3, 0x00, 0x02};
 
   //write
-  send(&data, 6);
+  send(data, 6);
+  char buffer[200];
 
-  int count = receive();
-
+  int count = receive(buffer);
+  int current_noise = -1, rssi_last_receive = -1;
   if (count == 5) {
-    current_noise = data[3];
-    rssi_last_receive = data[4];
+    current_noise = buffer[3];
+    rssi_last_receive = buffer[4];
   }
   
-  Serial.println("current_noise : %d", current_noise);
-  Serial.println("rssi_last_receive : %d", rssi_last_receive);
+  Serial.print("\ncurrent_noise :");
+  Serial.print(current_noise);
+  Serial.print("\nrssi_last_receive :");
+  Serial.print(rssi_last_receive);
 }

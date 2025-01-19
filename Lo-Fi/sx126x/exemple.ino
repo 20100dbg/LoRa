@@ -1,13 +1,13 @@
 
-sx126x lora;
+#define sx126x lora;
 
 void setup()
 {
 
-  lora.setup();
+  //lora.setup();
 
   delay(10);
-  read_config();
+  //read_config();
 }
 
 void loop() 
