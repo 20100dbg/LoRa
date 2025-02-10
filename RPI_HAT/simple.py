@@ -10,26 +10,28 @@ import threading
 import time
 
 def listener():
-    while isRunning:
+    while is_running:
         data = lora.receive()
         if data:
             print("> " + data.decode())
         time.sleep(0.1)
 
 
-#initialize lora
-#lora = sx126x.sx126x(channel=18,address=100,network=0)
+#initialize lora using default settings
 lora = sx126x.sx126x()
+is_running = True
 
 #start receive thread
 t_receive = threading.Thread(target=listener)
 t_receive.start()
 
+
 #loop for sending messages
 while True:
     try:
         txt = input()
-    except KeyboarInterrupt:
+    except KeyboardInterrupt:
+        is_running = False
         break
 
     #if exit, kill thread and break loop
