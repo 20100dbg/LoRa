@@ -1,0 +1,11 @@
+sx126x
+
+tous les paramètres sont transmis en dictionnaire / réceptionnés avec kwargs
+
+ajouter fonction qui retourne les paramètres par défaut
+
+setconfig : 
+- renommer set_local_variables
+- tous les paramètres en =None
+- si param = None, ne pas changer
+

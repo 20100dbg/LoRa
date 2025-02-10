@@ -7,26 +7,32 @@ class sx126x
 {
   public:
     sx126x();
+    void begin();
+    void set_config(int addrh = NULL, int addrl = NULL, int network = NULL,
+                float air_data_rate = NULL, int sub_packet_size = NULL, 
+                bool channel_noise = NULL, int tx_power = NULL, int channel = NULL, 
+                bool enable_rssi = NULL, bool transmission_mode = NULL, 
+                bool enable_repeater = NULL, bool enable_lbt = NULL,
+                int wor_control = NULL, int wor_cycle = NULL, int crypth = NULL,
+                int cryptl = NULL, bool write_registers = true);
     
-    void set_config(int addrh, int addrl, int netid,
-                int serial_port_rate, int serial_parity_bit, int air_data_rate,
-                int sub_packet_size, int channel_noise, int tx_power, 
-                int channel, int enable_rssi, int transmission_mode, 
-                int enable_repeater, int enable_lbt,
-                int wor_control, int wor_cycle, int crypth, int cryptl);
-    void read_config();
     void print_hex(char* buffer, int count);
     void send(char* buffer, int count);
     int receive(char* buffer);
-    int getRSSI();
+    int get_rssi();
 
   private:
-    #define lora Serial2 
+    #define serial_lora Serial2 
 
     void set_mode(int mode);
     void config(char* data);
     void send_config(char* data, int count);
+    void read_registers(char* result);
+    void write_registers();
+    void write_serial(char *data, char *result, int count);
 
+    int params;
+    bool _debug;
 };
 
 #endif
