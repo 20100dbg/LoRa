@@ -159,7 +159,13 @@ class sx126x():
         if self.conf_mode:
             return None
 
-        data = self.serial.read_until(expected="")
+        data = self.serial.read(self.serial.in_waiting)
+
+        """
+        #Relies on serial timeout
+        if self.serial.in_waiting:
+            data = self.serial.read_until(expected='')
+        """
 
         if not data:
             data = None
@@ -200,7 +206,7 @@ class sx126x():
             GPIO.output(self.M0, False)
             GPIO.output(self.M1, False)
 
-        time.sleep(0.1)
+        time.sleep(0.2)
 
 
     def show_config(self):
@@ -253,9 +259,6 @@ class sx126x():
                   
         """ Human readable settings from user are processed into internal parameters. """
 
-        if self.debug:
-            print(f"[+] set_config (write_registers {write_registers})")
-
         if addrh: self.params["addrh"] = addrh
         if addrl: self.params["addrl"] = addrl
         if network: self.params["network"] = network
@@ -272,6 +275,7 @@ class sx126x():
         if wor_cycle: self.params["wor_cycle"] = wor_cycle
         if crypth: self.params["crypth"] = crypth
         if cryptl: self.params["cryptl"] = cryptl
+        self.logical_address = self.__bytes_pair_to_int(self.params["addrh"], self.params["addrl"])
 
         if logical_address:
             self.logical_address = logical_address
@@ -391,7 +395,8 @@ class sx126x():
         
         self.serial.write(data)
         time.sleep(0.1)
-        ret = self.serial.read_until(expected="")
+        ret = self.serial.read(self.serial.in_waiting)
+        #ret = self.serial.read_until(expected='')
         
         if self.debug:
             print(f"[+] Config sent {self.__btohex(data)}")
@@ -416,7 +421,8 @@ class sx126x():
 
         self.serial.write(b"\xC0\xC1\xC2\xC3\x00\x02")
         
-        ret = self.serial.read_until(expected="")
+        #ret = self.serial.read_until(expected="")
+        ret = self.serial.read(self.serial.in_waiting)
 
         channel_noise = ret[3]
         last_rssi = ret[4]

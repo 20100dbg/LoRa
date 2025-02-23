@@ -13,7 +13,7 @@ def listener():
             if is_bot:
                 lora.send_bytes(data)
 
-        time.sleep(0.01)
+        time.sleep(0.1)
 
 
 def close():
@@ -48,9 +48,9 @@ group2.add_argument('-x', '--hex', default=False, action='store_true', help='Sen
 group2.add_argument('-b', '--bot', default=False, action='store_true', help='Start as bot that sends back everything it receives')
 
 group3 = parser.add_argument_group('Performance settings')
-group3.add_argument('-adr', '--air_data_rate', metavar='', choices=[0.3,1.2,2.4,4.8,9.6,19.2,38.4,62.5], help='0.3,1.2,2.4,4.8,9.6,19.2,38.4,62.5')
-group3.add_argument('-p', '--tx_power', metavar='', choices=[22,17,13,10], help='22,17,13,10')
-group3.add_argument('-s', '--sub_packet_size', metavar='', choices=[240,128,64,32], help='240,128,64,32')
+group3.add_argument('-adr', '--air_data_rate', metavar='', type=float, choices=[0.3,1.2,2.4,4.8,9.6,19.2,38.4,62.5], help='0.3,1.2,2.4,4.8,9.6,19.2,38.4,62.5')
+group3.add_argument('-p', '--tx_power', metavar='', type=int, choices=[22,17,13,10], help='22,17,13,10')
+group3.add_argument('-s', '--sub_packet_size', metavar='', type=int, choices=[240,128,64,32], help='240,128,64,32')
 
 """
 group4 = parser.add_argument_group('Repeater')
@@ -82,19 +82,10 @@ global is_running
 is_running = True
 is_bot = args.bot
 is_hex = args.hex
-debug = args.debug
 
-lora = sx126x.sx126x(port="/dev/ttyS0", debug=debug)
-
+lora = sx126x.sx126x(port="/dev/ttyS0", debug=args.debug)
 params = vars(args)
-del params["hex"]
-del params["bot"]
-del params["debug"]
-del params["key"]
 
-lora.set_config(**params)
-
-"""
 lora.set_config(addrh=params['addrh'], addrl=params['addrl'], network=params['network'], 
                 air_data_rate=params['air_data_rate'], sub_packet_size=params['sub_packet_size'],
                 channel_noise=params['channel_noise'], tx_power=params['tx_power'], 
@@ -102,11 +93,9 @@ lora.set_config(addrh=params['addrh'], addrl=params['addrl'], network=params['ne
                 transmission_mode=params['transmission_mode'], enable_repeater=params['enable_repeater'], 
                 enable_lbt=params['enable_lbt'], wor_control=params['wor_control'], 
                 wor_cycle=params['wor_cycle'], crypth=params['crypth'], cryptl=params['cryptl'])
-"""
-
 
 if args.enable_repeater:
-    set_repeater(args.repeater, args.netid1, args.netid2)
+    lora.set_repeater(args.repeater, args.netid1, args.netid2)
 
 
 t_receive = threading.Thread(target=listener)
