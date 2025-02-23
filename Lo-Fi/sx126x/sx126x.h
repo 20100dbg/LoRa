@@ -14,12 +14,13 @@ class sx126x
                 bool enable_rssi = NULL, bool transmission_mode = NULL, 
                 bool enable_repeater = NULL, bool enable_lbt = NULL,
                 int wor_control = NULL, int wor_cycle = NULL, int crypth = NULL,
-                int cryptl = NULL, bool write_registers = true);
+                int cryptl = NULL, bool write = true);
     
     void print_hex(char* buffer, int count);
     void send(char* buffer, int count);
     int receive(char* buffer);
-    int get_rssi();
+    s_rssi get_rssi();
+    void print_config();
 
   private:
     #define serial_lora Serial2 
@@ -27,11 +28,11 @@ class sx126x
     void set_mode(int mode);
     void config(char* data);
     void send_config(char* data, int count);
-    void read_registers(char* result);
+    s_param read_registers(char* result);
     void write_registers();
     void write_serial(char *data, char *result, int count);
 
-    int params;
+    s_param params;
     bool _debug;
 };
 

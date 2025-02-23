@@ -7,6 +7,7 @@ const int MODE_CONF = 1;
 const int MODE_WOR = 2;
 const int MODE_SLEEP = 3;
 
+/*
 const int SERIAL_PORT_RATE_1200 = 0;
 const int SERIAL_PORT_RATE_2400 = 0b00100000;
 const int SERIAL_PORT_RATE_4800 = 0b01000000;
@@ -65,7 +66,7 @@ const int WOR_CYCLE_2500 = 0b00000100;
 const int WOR_CYCLE_3000 = 0b00000101;
 const int WOR_CYCLE_3500 = 0b00000110;
 const int WOR_CYCLE_4000 = 0b00000111;
-
+*/
 
 const int SERIAL_PORT_RATE[][2] = {{1200, 0}, {2400, 0b00100000}, {4800, 0b01000000}, {9600, 0b01100000}, {19200, 0b10000000}, {38400, 0b10100000}, {57600, 0b11000000}, {115200, 0b11100000}};
 //8N1 = 0, 8O1 = 1, 8E1 = 2
@@ -82,3 +83,33 @@ const int ENABLE_LBT[][2] = {{0, 0}, {1, 0b00010000}};
 //receiver = 0, transmitter = 1
 const int WOR_CONTROL[][2] = {{0, 0}, {1, 0b00001000}};
 const int WOR_CYCLE[][2] = {{500, 0}, {1000, 0b00000001}, {1500, 0b00000010}, {2000, 0b00000011}, {2500, 0b00000100}, {3000, 0b00000101}, {3500, 0b00000110}, {4000, 0b00000111}};
+
+
+struct s_param
+{
+    int serial_port_rate;
+    int serial_parity_bit;
+    
+    int addrh;
+    int addrl;
+    int network;
+    float air_data_rate;
+    int sub_packet_size;
+    bool channel_noise;
+    int tx_power;
+    int channel;
+    bool enable_rssi;
+    bool transmission_mode;
+    bool enable_repeater;
+    bool enable_lbt;
+    int wor_control;
+    int wor_cycle;
+    int cryptl;
+    int crypth;
+};
+
+struct s_rssi
+{
+    int current_noise;
+    int rssi_last_receive;
+};
