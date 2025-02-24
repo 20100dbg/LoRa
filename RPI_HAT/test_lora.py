@@ -101,7 +101,7 @@ if args.enable_repeater:
 t_receive = threading.Thread(target=listener)
 t_receive.start()
 
-if debug:
+if args.debug:
     print()
     lora.show_config()
 print()

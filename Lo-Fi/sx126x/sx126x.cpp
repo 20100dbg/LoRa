@@ -1,5 +1,4 @@
 #include "sx126x.h"
-//#define mySerial Serial2
 
 sx126x::sx126x() {
   _debug = true;
@@ -34,13 +33,11 @@ void sx126x::begin() {
               read_params.enable_lbt, read_params.wor_control,
               read_params.wor_cycle, read_params.crypth,
               read_params.cryptl, false);
-  
 }
 
 
 void sx126x::send(char* buffer, int count) {
   serial_lora.write(buffer, count);
-  //serial_lora.write((byte*)&data, sizeof(data));
   delay(10);
 }
 
@@ -71,7 +68,7 @@ void sx126x::set_mode(int mode) {
     digitalWrite(M0, LOW);
     digitalWrite(M1, LOW);
   }
-  delay(10);
+  delay(100);
 }
 
 void sx126x::set_config(int addrh, int addrl, int network,
@@ -82,29 +79,30 @@ void sx126x::set_config(int addrh, int addrl, int network,
                 int wor_control, int wor_cycle, int crypth,
                 int cryptl, bool write)
 {
+  if (addrh != NULL) params.addrh = addrh;
+  if (addrl != NULL) params.addrl = addrl;
+  if (network != NULL) params.network = network;
+  if (air_data_rate != NULL) params.air_data_rate = air_data_rate;
+  if (sub_packet_size != NULL) params.sub_packet_size = sub_packet_size;
+  if (channel_noise != NULL) params.channel_noise = channel_noise;
+  if (tx_power != NULL) params.tx_power = tx_power;
+  if (channel != NULL) params.channel = channel;
+  if (enable_rssi != NULL) params.enable_rssi = enable_rssi;
+  if (transmission_mode != NULL) params.transmission_mode = transmission_mode;
+  if (enable_repeater != NULL) params.enable_repeater = enable_repeater;
+  if (enable_lbt != NULL) params.enable_lbt = enable_lbt;
+  if (wor_control != NULL) params.wor_cycle = wor_control;
+  if (crypth != NULL) params.crypth = crypth;
+  if (cryptl != NULL) params.cryptl = cryptl;
 
-  if (addrh != NULL) params.addrh;
-  if (addrl != NULL) params.addrl;
-  if (network != NULL) params.network;
-  if (air_data_rate != NULL) params.air_data_rate;
-  if (sub_packet_size != NULL) params.sub_packet_size;
-  if (channel_noise != NULL) params.channel_noise;
-  if (tx_power != NULL) params.tx_power;
-  if (channel != NULL) params.channel;
-  if (enable_rssi != NULL) params.enable_rssi;
-  if (transmission_mode != NULL) params.transmission_mode;
-  if (enable_repeater != NULL) params.enable_repeater;
-  if (enable_lbt != NULL) params.enable_lbt;
-  if (wor_control != NULL) params.wor_cycle;
-  if (crypth != NULL) params.crypth;
-  if (cryptl != NULL) params.cryptl;
+  params.serial_port_rate = 9600;
+  params.serial_parity_bit = 0;
   
   /*
   if (logical_address != NULL) {
 
   }
   */
-
 
   if (write) {
     write_registers();
@@ -120,30 +118,13 @@ s_param sx126x::read_registers(char* result)
   read_params.addrh = result[3];
   read_params.addrl = result[4];
   read_params.network = result[5];
-
-  int serial_port_rate=0;
-  int serial_parity_bit=0;
-  //float air_data_rate=0;
-
-  //int sub_packet_size=0;
-  //bool channel_noise=false;
-  //int tx_power=0;
-
   read_params.channel = result[8];
-
-  //bool enable_rssi = false;
-  //bool transmission_mode = false;
-  //bool enable_repeater = false;
-  //bool enable_lbt = false;
-  //bool wor_control = false;
-  //int wor_cycle = 0;
-
   read_params.crypth = result[10];
   read_params.cryptl = result[11];
 
-  for (int i = 0; i < 8; i++) if ((result[6] & 0b11100000) == SERIAL_PORT_RATE[i][1]) serial_port_rate = SERIAL_PORT_RATE[i][0];
-  for (int i = 0; i < 3; i++) if ((result[6] & 0b00011000) == SERIAL_PARITY_BIT[i][1]) serial_parity_bit = SERIAL_PARITY_BIT[i][0];  
-  for (int i = 0; i < 8; i++) if ((result[6] & 0b00000111) == AIR_DATA_RATE[i][1]) read_params.air_data_rate = AIR_DATA_RATE[i][0];
+  for (int i = 0; i < 8; i++) if ((result[6] & 0b11100000) == SERIAL_PORT_RATE[i][1]) read_params.serial_port_rate = SERIAL_PORT_RATE[i][0];
+  for (int i = 0; i < 3; i++) if ((result[6] & 0b00011000) == SERIAL_PARITY_BIT[i][1]) read_params.serial_parity_bit = SERIAL_PARITY_BIT[i][0];  
+  for (int i = 0; i < 8; i++) if ((result[6] & 0b00000111) == AIR_DATA_RATE[i][1]) read_params.air_data_rate = AIR_DATA_RATE[i][0] / 10;
   for (int i = 0; i < 4; i++) if ((result[7] & 0b11000000) == SUB_PACKET_SIZE[i][1]) read_params.sub_packet_size = SUB_PACKET_SIZE[i][0];
   for (int i = 0; i < 2; i++) if ((result[7] & 0b00100000) == CHANNEL_NOISE[i][1]) read_params.channel_noise = (CHANNEL_NOISE[i][0] == 1);  
   for (int i = 0; i < 4; i++) if ((result[7] & 0b00000011) == TX_POWER[i][1]) read_params.tx_power = TX_POWER[i][0];
@@ -154,8 +135,9 @@ s_param sx126x::read_registers(char* result)
   for (int i = 0; i < 2; i++) if ((result[9] & 0b00001000) == WOR_CONTROL[i][1]) read_params.wor_control = (WOR_CONTROL[i][0] == 1);
   for (int i = 0; i < 8; i++) if ((result[9] & 0b00000111) == WOR_CYCLE[i][1]) read_params.wor_cycle = WOR_CYCLE[i][0];
 
-  Serial.println("\n\nread config");
-  print_hex(result, 12);
+  Serial.println(read_params.air_data_rate);
+
+  return read_params;
 }
 
 
@@ -179,6 +161,8 @@ void sx126x::write_registers()
   for (int i = 0; i < 2; i++) if (params.wor_control == WOR_CONTROL[i][0]) write_params.wor_control = (WOR_CONTROL[i][1] == 1);
   for (int i = 0; i < 8; i++) if (params.wor_cycle == WOR_CYCLE[i][0]) write_params.wor_cycle = WOR_CYCLE[i][1];
 
+  params.serial_port_rate = 9600;
+  params.serial_parity_bit = 0;
 
   settings[3] = write_params.addrh;
   settings[4] = write_params.addrl;
@@ -198,7 +182,7 @@ void sx126x::write_registers()
   write_serial(settings, result, sizeof(settings));
 
   if (result[0] == 0xff && result[1] == 0xff && result[2] == 0xff) {
-    //erreur
+    Serial.println("[-] ERROR WRITING CONFIG");
   }
 
 }
@@ -213,7 +197,7 @@ void sx126x::write_serial(char *data, char *result, int count)
   }
   
   serial_lora.write(data, count);
-  delay(20);
+  delay(100);
 
   count = receive(result);
 
@@ -240,7 +224,6 @@ void sx126x::print_hex(char* buffer, int count) {
 s_rssi sx126x::get_rssi() {
   char data[] = {0xC0, 0xC1, 0xC2, 0xC3, 0x00, 0x02};
 
-  //write
   send(data, 6);
   char buffer[5];
 
