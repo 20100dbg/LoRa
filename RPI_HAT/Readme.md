@@ -47,6 +47,7 @@ python -m venv .venv
 source .venv/bin/activate
 
 pip install pyserial
+pip install lgpio
 pip install gpiozero
 ```
 
