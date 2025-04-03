@@ -8,14 +8,17 @@ class sx126x
   public:
     sx126x();
     void begin();
-    void set_config(int addrh = NULL, int addrl = NULL, int network = NULL,
-                float air_data_rate = NULL, int sub_packet_size = NULL, 
-                bool channel_noise = NULL, int tx_power = NULL, int channel = NULL, 
-                bool enable_rssi = NULL, bool transmission_mode = NULL, 
-                bool enable_repeater = NULL, bool enable_lbt = NULL,
-                int wor_control = NULL, int wor_cycle = NULL, int crypth = NULL,
-                int cryptl = NULL, bool write = true);
     
+    bool set_address(int address);
+    bool set_network(int network);
+    bool set_air_data_rate(float air_data_rate);
+    bool set_tx_power(int tx_power);
+    bool set_sub_packet_size(int sub_packet_size);
+    bool set_channel(int channel);
+    bool set_channel_noise(bool channel_noise);
+    bool set_rssi(bool enable_rssi);
+    bool set_crypt_key(int key);
+
     void print_hex(char* buffer, int count);
     void send(char* buffer, int count);
     int receive(char* buffer);

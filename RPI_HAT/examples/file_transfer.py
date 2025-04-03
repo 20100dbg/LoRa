@@ -31,7 +31,6 @@ def callback_lora(data):
 
     msg_type, msg_id = extract_header(data)
 
-
     if msg_type == MsgType.HELLO.value:
         filesize = bytes_to_int(data[5:9])
         filename = data[9:].decode()
@@ -68,7 +67,7 @@ def callback_lora(data):
 #NACK - NB MISSING 4 - MSGID
 
 sender = True
-filename = "xxx"
+filename = "frontiere.png"
 filesize = os.path.getsize(filename)
 
 #filesize max = 256^4 = 4 294 967 296
@@ -77,14 +76,16 @@ filesize = os.path.getsize(filename)
 last_msg_id = 0
 missing_msg_id = []
 
-air_data_rate = 62.5 #0.3 1.2 2.4 4.8 9.6 19.2 38.4 62.5
+#0.3 1.2 2.4 4.8 9.6 19.2 38.4 62.5
+air_data_rate = 62.5 
 channel = 18
 sub_packet_size = 240 #240 128 64 32
 payload_size = sub_packet_size - 6
 
+delay = 0.05
 msg_id = 0
 
-lora = sx126x.sx126x(port="/dev/ttyS0", debug=False)
+lora = sx126x.sx126x(debug=False)
 lora.set_config(air_data_rate=air_data_rate, sub_packet_size=sub_packet_size, tx_power=10, channel=channel)
 
 if sender:
@@ -92,11 +93,12 @@ if sender:
     #send HELLO
     msg = b''
     msg += MsgType.HELLO.value
-    msg += 0
+    msg += int_to_bytes(msg_id, 4)
     msg += int_to_bytes(filesize, 4)
     msg += filename.encode()
 
     lora.send_bytes(msg)
+    time.sleep(delay)
 
     with open(filename, "rb") as f:
         while True:
@@ -111,12 +113,11 @@ if sender:
             msg_id += 1
 
             lora.send_bytes(msg)
-            time.sleep(0.05)
+            time.sleep(delay)
 
 #receiver
 else:
-    lora.listen(callback, expected_size=None,)
-
+    lora.listen(callback, expected_size=sub_packet_size)
 
 
 while True:
