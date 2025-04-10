@@ -2,7 +2,7 @@ import sx126x
 import threading
 import time
 
-def bytes_to_str(arr):
+def bytes_to_hex(arr):
     return ' '.join(['{:02X}'.format(b) for b in arr])
 
 
@@ -47,7 +47,7 @@ def listen_loop(callback, idx_payload_size, headers_size, sync_word):
                         buffer_receive = buffer_receive[expected_size:]
                         
                         if buffer_receive:
-                            print(f"data left {bytes_to_str(buffer_receive)}")
+                            print(f"data left {bytes_to_hex(buffer_receive)}")
                     else:
                         break
                 else:
@@ -69,7 +69,7 @@ def listen_loop(callback, idx_payload_size, headers_size, sync_word):
 
 
 def handle_packet(data):
-    print(f"got packet {len(data)} - {bytes_to_str(data[0:10])}...{bytes_to_str(data[-4:])}")
+    print(f"got packet {len(data)} - {bytes_to_hex(data[0:10])}...{bytes_to_hex(data[-4:])}")
 
 
 sync_word = b"\xB5\x62"

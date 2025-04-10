@@ -11,7 +11,7 @@ def calculate_checksum(data):
 
     return (CK_A & 0xFF, CK_B & 0xFF)
 
-def bytes_to_str(arr):
+def bytes_to_hex(arr):
     return ' '.join(['{:02X}'.format(b) for b in arr])
 
 def listener():
@@ -29,7 +29,7 @@ def callback_lora(data):
 
     if data and len(data) >= 6:
 
-        print(f"{bytes_to_str(data[0:20])}...")
+        print(f"{bytes_to_hex(data[0:20])}...")
         if data[0:2] == b"\xB5\x62": # and data[-2:] == b"\xC6\x73":
             
             if time_start == 0:
@@ -55,7 +55,7 @@ def callback_lora(data):
             checksum2 = calculate_checksum(payload)
 
             if checksum[0] != checksum2[0] or checksum[1] != checksum2[1]:
-                print(f"[-] bad checksum, expected {bytes_to_str(checksum)} got {bytes_to_str(list(checksum2))}")
+                print(f"[-] bad checksum, expected {bytes_to_hex(checksum)} got {bytes_to_hex(list(checksum2))}")
                 packet_valid = False
 
             if packet_valid:
@@ -72,7 +72,7 @@ def callback_lora(data):
         #if len(data) > 12:
         #    print(f"data left : {data[12:]}")
 
-        #print(f"received {len(data)} : {bytes_to_str(data)}")
+        #print(f"received {len(data)} : {bytes_to_hex(data)}")
 
 
 global last_msg_id, time_start, received_size

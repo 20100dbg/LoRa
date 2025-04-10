@@ -43,6 +43,7 @@ class sx126x():
         self.conf_mode = False
         self.params = self.default_params
         self.debug = debug
+        self.ready = True
 
         self.M0 = LED("GPIO22")
         self.M1 = LED("GPIO27")
@@ -50,14 +51,14 @@ class sx126x():
         self.serial = self.__open_serial(port=self.serial_params["port"], timeout=1)
         
         #Due to some weird bug (only on Rpi5) we need to close and reopen serial
-        time.sleep(0.5)
+        time.sleep(0.2)
         self.serial.close()
-        time.sleep(0.5)
+        time.sleep(0.2)
         self.serial.open()
                 
         self.serial.read(self.serial.in_waiting)
         read_params = self.read_registers()
-        
+
         if self.debug:
             print("[+] Reading registers")
             print(read_params)
@@ -75,6 +76,7 @@ class sx126x():
                             write_registers=False)
         else:
             print("[-] Error reading config")
+            self.ready = False
 
 
     #
@@ -177,7 +179,6 @@ class sx126x():
 
 
     def listen_loop(self, callback):
-
         while self.running_listen:            
             data = self.receive()
 
@@ -234,7 +235,7 @@ class sx126x():
 
     def show_config(self):
         """ Print some useful config variables to help debug """
-        print(f"[+] logical address {self.logical_address}, addrh {self.params['addrh']}, addrl {self.params['addrl']}")
+        print(f"addrh {self.params['addrh']}, addrl {self.params['addrl']}")
         print(f"[+] channel {self.params['channel']}, network {self.params['network']}, crypth {self.params['crypth']}, cryptl {self.params['cryptl']}")        
         print()
         print(f"[+] params {self.params}")
@@ -409,10 +410,12 @@ class sx126x():
         ret = self.serial.read(self.serial.in_waiting)        
         
         idx_start = self.find_sync(ret, b"\xC1\x00\x09")
-        if idx_start >= 0:
+
+        if idx_start >= 0 and len(ret[idx_start:]) == idx_start+12:
             ret = ret[idx_start:idx_start+12]
         else:
             ret = b"\xff\xff\xff"
+
 
         if self.debug:
             print(f"[+] Config sent {self.__btohex(data)}")

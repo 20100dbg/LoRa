@@ -31,7 +31,7 @@ def registers_to_variables(arr):
     netid = arr[2]
     bz = f'{arr[3]:0>8b}'
     baudrate = [k for k, v in BAUDRATE.items() if v == int(bz[:3], 2) << 5][0]
-    portmode = [k for k, v in PORTMODE.items() if v == int(bz[3:5], 2) << 3][0]
+    portmode = [k for k, v in PORTMODE.items() if v == int(bz[3:5], 2) << 3]
     airrate = [k for k, v in AIRRATE.items() if v == int(bz[5:], 2)][0]
     bz = f'{arr[4]:0>8b}'
     packetsize = [k for k, v in PACKETSIZE.items() if v == int(bz[:2], 2) << 6][0]
@@ -236,7 +236,7 @@ def show_config_hex(arr):
     return cmd
 
 
-def bytes_to_str(arr):
+def bytes_to_hex(arr):
     return ' '.join(['{:02X}'.format(b) for b in arr])   
 
 
@@ -262,7 +262,7 @@ if args.manual:
     arr_registers = manual_config(args.low_high)
     cmd = show_config_hex(arr_registers)
     print()
-    print("Config in hex :", bytes_to_str(cmd))
+    print("Config in hex :", bytes_to_hex(cmd))
 elif args.hex:
 
     if isinstance(args.hex, list):

@@ -23,7 +23,7 @@ def int_to_bytes(x, bytes_count=1):
 def bytes_to_int(b):
     return int.from_bytes(b)
 
-def bytes_to_str(arr):
+def bytes_to_hex(arr):
     return ' '.join(['{:02X}'.format(b) for b in arr])
 
 
