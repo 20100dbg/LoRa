@@ -31,7 +31,7 @@ struct s_param
     int addrh;
     int addrl;
     int network;
-    float air_data_rate;
+    int air_data_rate;
     int sub_packet_size;
     bool channel_noise;
     int tx_power;
