@@ -25,49 +25,25 @@ void setup() {
   
   Serial.begin(9600);
 
-  // initialize SX1268 with default settings
-  Serial.print(F("[SX1262] Initializing ... "));
   state = radio.begin();
   if (state != RADIOLIB_ERR_NONE) Serial.println(state);
-  delay(500);
+  delay(10);
 
-  // set the function that will be called
-  // when new packet is received
   radio.setDio1Action(action_done);
 
-  if (radio.setFrequency(868) == RADIOLIB_ERR_INVALID_FREQUENCY) {
-    Serial.println(F("Selected frequency is invalid for this module!"));
-  }
-
-  if (radio.setBandwidth(250.0) == RADIOLIB_ERR_INVALID_BANDWIDTH) {
-    Serial.println(F("Selected bandwidth is invalid for this module!"));
-  }
-
-  if (radio.setSpreadingFactor(10) == RADIOLIB_ERR_INVALID_SPREADING_FACTOR) {
-    Serial.println(F("Selected spreading factor is invalid for this module!"));
-  }
-
-  if (radio.setCodingRate(6) == RADIOLIB_ERR_INVALID_CODING_RATE) {
-    Serial.println(F("Selected coding rate is invalid for this module!"));
-  }
-
-  if (radio.setOutputPower(10) == RADIOLIB_ERR_INVALID_OUTPUT_POWER) {
-    Serial.println(F("Selected output power is invalid for this module!"));
-  }
-
-  if (radio.setPreambleLength(8) == RADIOLIB_ERR_INVALID_PREAMBLE_LENGTH) {
-    Serial.println(F("Selected preamble length is invalid for this module!"));
-  }
-
-  if (radio.setCRC(false) == RADIOLIB_ERR_INVALID_CRC_CONFIGURATION) {
-    Serial.println(F("Selected CRC is invalid for this module!"));
-  }
-  delay(500);
+  radio.setFrequency(868);
+  radio.setBandwidth(250.0);
+  radio.setSpreadingFactor(2);
+  radio.setCodingRate(2);
+  radio.setOutputPower(10);
+  radio.setPreambleLength(8);
+  radio.setCRC(false);
+  
+  delay(10);
 }
 
-void loop() {
-
-    Serial.print(F("[SX1262] Sending first packet ... "));
+void loop()
+{
     state = radio.startTransmit("Hello World!");
     if (state != RADIOLIB_ERR_NONE) Serial.println(state);
     delay(500);
@@ -78,7 +54,7 @@ void loop() {
 
     String str;
     state = radio.readData(str);
-
+ 
     if (state == RADIOLIB_ERR_NONE) {
       Serial.println(str);
       Serial.println(radio.getRSSI());
