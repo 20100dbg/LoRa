@@ -55,6 +55,8 @@ class sx126x():
         self.serial.close()
         time.sleep(0.2)
         self.serial.open()
+
+        self.reset_buffers()
                 
         self.serial.read(self.serial.in_waiting)
         read_params = self.read_registers()
