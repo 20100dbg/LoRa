@@ -9,6 +9,12 @@ LORA_DRIVER ?= sx1262
 USEMODULE += $(LORA_DRIVER)
 USEMODULE += ztimer_msec
 
+#USEMODULE += sx126x_stm32wl
+
+USEMODULE += stdio_uart
+USEMODULE += stdin
+
+
 # This has to be the absolute path to the RIOT base directory:
 RIOTBASE ?= $(CURDIR)/../../..
 

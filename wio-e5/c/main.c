@@ -11,6 +11,12 @@
 //using ZTIMER_MSEC constant needs to add following in Makefile :
 //USEMODULE += ztimer_msec
 
+
+#include "periph/gpio.h"
+#include "stdio_base.h"
+
+
+
 #define SX126X_MSG_QUEUE        (8U)
 #define SX126X_STACKSIZE        (THREAD_STACKSIZE_DEFAULT)
 #define SX126X_MSG_TYPE_ISR     (0x3456)
@@ -39,8 +45,13 @@ struct s_config {
 static void receive_callback(char *message, unsigned int len, int rssi, int snr,
                              long unsigned int toa)
 {
+
+    stdio_write(message, len);
+
+    
     printf("Received: \"%s\" (%" PRIuSIZE " bytes) - [RSSI: %i, SNR: %i, TOA: %" PRIu32 "ms]\n",
            message, len, rssi, snr, toa);
+    
 }
 
 //Called for every network event
@@ -88,7 +99,7 @@ static void _event_cb(netdev_t *dev, netdev_event_t event)
         case NETDEV_EVENT_TX_COMPLETE_DATA_PENDING: puts("NETDEV_EVENT_TX_COMPLETE_DATA_PENDING");break;
         case NETDEV_EVENT_TX_NOACK: puts("NETDEV_EVENT_TX_NOACK"); break;
         case NETDEV_EVENT_TX_MEDIUM_BUSY: puts("NETDEV_EVENT_TX_MEDIUM_BUSY"); break;
-        case NETDEV_EVENT_LINK_UP: puts("NETDEV_EVENT_LINK_UP"); break;
+        case NETDEV_EVENT_LINK_UP: /*puts("NETDEV_EVENT_LINK_UP"); */break;
         case NETDEV_EVENT_LINK_DOWN: puts("NETDEV_EVENT_LINK_DOWN"); break;
         case NETDEV_EVENT_RX_TIMEOUT: puts("NETDEV_EVENT_RX_TIMEOUT"); break;
         case NETDEV_EVENT_CRC_ERROR: puts("NETDEV_EVENT_CRC_ERROR"); break;
@@ -181,7 +192,7 @@ static int write_config(netdev_t *netdev, struct s_config config)
     case 125: bw_val = LORA_BW_125_KHZ; break;
     case 250: bw_val = LORA_BW_250_KHZ; break;
     case 500: bw_val = LORA_BW_500_KHZ; break;
-    default: break;
+    default: bw_val = LORA_BW_125_KHZ; break;
     }
 
     ret = netdev->driver->set(netdev, NETOPT_BANDWIDTH, &bw_val, sizeof(uint8_t));
@@ -243,21 +254,31 @@ static void print_config(struct s_config config)
     printf("---------------\n");
 }
 
+
 //Send LoRa packet
-int send(netdev_t *netdev, char *data)
+int send(netdev_t *netdev, char *data, int count)
 {
-    printf("sending \"%s\" payload (%" PRIuSIZE " bytes)\n", data, strlen(data) + 1);
+    //désactive l'écoute pour permettre la transmission
+    netopt_state_t state = NETOPT_STATE_STANDBY;
+    netdev->driver->set(netdev, NETOPT_STATE, &state, sizeof(state));
+    
+    ztimer_sleep(ZTIMER_MSEC, 50); // ne pas descendre en dessous de 20
+
+
+    //printf("sending \"%s\" payload (%" PRIuSIZE " bytes)\n", data, strlen(data) + 1);
 
     iolist_t iolist = {
-        .iol_base = data,
-        .iol_len = (strlen(data) + 1)
+        .iol_base = &data,
+        .iol_len = count //(strlen(data) + 1)
     };
 
     if (netdev->driver->send(netdev, &iolist) == -ENOTSUP) {
         return -1;
     }
 
-    netopt_state_t state = NETOPT_STATE_IDLE;
+    //réactive l'écoute
+    ztimer_sleep(ZTIMER_MSEC, 50); // ne pas descendre en dessous de 20
+    state = NETOPT_STATE_IDLE;
     netdev->driver->set(netdev, NETOPT_STATE, &state, sizeof(state));
 
     return 0;
@@ -277,27 +298,38 @@ int main(void)
         return 1;
     }
 
+
+    //gpio
+    //int pin_led = 10;
+    //gpio_init(pin_led, GPIO_OUT);
+
+    stdio_init();
+
+    int pin_led = GPIO_PIN(1, 10);
+    gpio_init(pin_led, GPIO_OUT);
+
+
     //Read / set config
     struct s_config config;
 
     read_config(netdev, &config);
-    print_config(config);
+    //print_config(config);
 
     if (true) {
 
-        config.frequency = 868000000; 
+        config.frequency = 433000000; 
         config.bandwith = 125;
         config.spreading_factor = 7;
         config.coding_rate = 1;
         config.integrity_check = false;
         config.preamble = 8;
         config.payload_length = 32;
-        config.tx_power = 16;
+        config.tx_power = 10;
 
 
         write_config(netdev, config);
         read_config(netdev, &config);
-        print_config(config);
+        //print_config(config);
     }
 
     //enable listening
@@ -314,19 +346,59 @@ int main(void)
     }
 
 
+    //I/O over UART
+    //https://doc.riot-os.org/group__sys__stdio.html
+    //https://doc.riot-os.org/group__sys__stdio__uart.html
+    //https://doc.riot-os.org/group__drivers__periph__uart.html
+ 
+
+    /*int uart_mode (uart_t uart, uart_data_bits_t data_bits, uart_parity_t parity, uart_stop_bits_t stop_bits)
+    - UART_PARITY_NONE
+    - UART_DATA_BITS_8
+    - UART_STOP_BITS_1
+
+
+    uart_write (uart_t uart, const uint8_t *data, size_t len)
+    */
+
+    //ssize_t stdio_read(void *buffer, size_t max_len)
+    //ssize_t stdio_write(const void *buffer, size_t len)
+
+
+    
+
 
     //send a message
-    char msg[] = "hello 1 !";
-    
+    char *msg;
+    size_t max_len = 240;
+    //char msg[] = "hello 2 !";
+    //bool led_on = true;
 
     //Infinite loop to avoid terminate program
     while (1) {
         ztimer_sleep(ZTIMER_MSEC, 2000);
-        int res = send(netdev, msg);
+            
+        //led_on = !led_on;
+        //gpio_write(pin_led, led_on);
+        
 
-        if (res < 0) {
+        
+        if (stdio_available()) {
+            ssize_t count = stdio_read(&msg, max_len);
+            printf("count : %d\n", count);
+
+            if (send(netdev, msg, count) < 0) {
+                puts("problem sending");
+            }
+        }
+        
+        /*
+        if (send(netdev, msg) < 0) {
             puts("problem sending");
         }
+        */
+
+
     }
 
     return 0;
