@@ -121,6 +121,7 @@ sudo BOARD=lora-e5-dev LORA_DRIVER=sx126x_stm32wl make debug
 
 
 
+
 ### Additionnal notes
 
 Connexion port série
@@ -129,4 +130,12 @@ Connexion port série
 
 Ne pas oublier LORA_DRIVER=sx126x_stm32wl : même si le driver est dans le makefile, si on ne le mets pas en paramètres, ça compile mais pas d'envoi/réception de message... Le debug a été long et douloureux.
 
+
+Ignore warnings :
+Add `WERROR=0` when flashing
+Ex : `sudo BOARD=lora-e5-dev LORA_DRIVER=sx126x_stm32wl WERROR=0 make flash`
+
+Don't show "This is RIOT !" welcome message :
+edit RIOT/core/lib/init.c
+comment LOG_INFO(CONFIG_BOOT_MSG_STRING);
 

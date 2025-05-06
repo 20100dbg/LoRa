@@ -48,10 +48,10 @@ static void receive_callback(char *message, unsigned int len, int rssi, int snr,
 
     stdio_write(message, len);
 
-    
+/*    
     printf("Received: \"%s\" (%" PRIuSIZE " bytes) - [RSSI: %i, SNR: %i, TOA: %" PRIu32 "ms]\n",
            message, len, rssi, snr, toa);
-    
+*/  
 }
 
 //Called for every network event
@@ -67,9 +67,7 @@ static void _event_cb(netdev_t *dev, netdev_event_t event)
     }
     else {
         switch (event) {
-        case NETDEV_EVENT_RX_STARTED:
-            puts("Data reception started");
-            break;
+        case NETDEV_EVENT_RX_STARTED: /* puts("Data reception started"); */ break;
 
         //A packet is received
         case NETDEV_EVENT_RX_COMPLETE:
@@ -87,13 +85,8 @@ static void _event_cb(netdev_t *dev, netdev_event_t event)
         }
         break;
 
-        case NETDEV_EVENT_TX_COMPLETE:
-            puts("Transmission completed");
-            break;
-
-        case NETDEV_EVENT_TX_TIMEOUT:
-            puts("Transmission timeout");
-            break;
+        case NETDEV_EVENT_TX_COMPLETE: /* puts("Transmission completed"); */ break;
+        case NETDEV_EVENT_TX_TIMEOUT: puts("Transmission timeout"); break;
 
         case NETDEV_EVENT_TX_STARTED: puts("NETDEV_EVENT_TX_STARTED"); break;
         case NETDEV_EVENT_TX_COMPLETE_DATA_PENDING: puts("NETDEV_EVENT_TX_COMPLETE_DATA_PENDING");break;
@@ -376,7 +369,7 @@ int main(void)
 
     //Infinite loop to avoid terminate program
     while (1) {
-        ztimer_sleep(ZTIMER_MSEC, 2000);
+        
             
         //led_on = !led_on;
         //gpio_write(pin_led, led_on);
@@ -385,7 +378,6 @@ int main(void)
         
         if (stdio_available()) {
             ssize_t count = stdio_read(&msg, max_len);
-            printf("count : %d\n", count);
 
             if (send(netdev, msg, count) < 0) {
                 puts("problem sending");
@@ -398,6 +390,7 @@ int main(void)
         }
         */
 
+        ztimer_sleep(ZTIMER_MSEC, 1);
 
     }
 

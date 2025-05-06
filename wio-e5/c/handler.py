@@ -1,24 +1,51 @@
-import subprocess
-
-# serial.Serial(port=port, baudrate=115200, timeout=1)
-
-
-cmd = ["./prog"]
-process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, stdin=subprocess.PIPE, 
-	text=False)
+import serial
+import threading
+import time
+import sys
 
 
-size = 6
+def str_hex_to_bytes(txt):
+    txt = txt.replace(' ', '')
+    return bytes.fromhex(txt)
+
+def bytes_to_hex(arr):
+    return ' '.join(['{:02X}'.format(b) for b in arr])
+
+
+def listener():
+    while True:
+        data = ser.read(ser.in_waiting)
+        if data:
+            print(f"hex : {bytes_to_hex(data)}")
+            try:
+                print(f"str : {data.decode()}")
+            except Exception as e:
+                pass
+            ser.flush()
+
+        time.sleep(0.5)
+
+
+
+port = "/dev/ttyUSB0"
+ser = serial.Serial(port=port, baudrate=115200, timeout=1)
+
+
+t_receive = threading.Thread(target=listener)
+t_receive.start()
 
 while True:
-	line = process.stdout.read()
-	if line:
-		print(line, end="")
-	else:
-		break
 
-print()
+    try:
+        #string only
+        #txt = input()
 
+        #bytes
+        data = sys.stdin.buffer.read()
 
-msg = "yopla".encode()
-process.stdin.write(msg)
+        b = str_hex_to_bytes(txt)
+        ser.write(b)
+    except KeyboardInterrupt as e:
+        break
+
+ser.close()
