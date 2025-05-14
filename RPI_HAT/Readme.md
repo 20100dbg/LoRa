@@ -14,7 +14,7 @@ We will need to :
 - Change both yellow jumpers from position 1 to position 2
 
 You should have this result :
-![LoRa set up](https://github.com/20100dbg/lora/blob/master/hat_setup.jpg?raw=true)
+![LoRa set up](https://github.com/20100dbg/LoRa/blob/master/RPI_HAT/hat_setup.jpg?raw=true)
 
 
 ### OS
