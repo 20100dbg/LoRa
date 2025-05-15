@@ -1,17 +1,37 @@
 #include <sx126x.h>
 sx126x lora;
 
+//SYNC (2) + FROM (1) + TO (1) + SIZE (1) + MSG
+
+
+String list_msg[] = {"En place", "Zone RAS", "Demande de releve",
+                    "VHL en approche", "Survol drone",
+                    "Demande identification"};
+int list_msg_size = 6;
+
 char sync_word[] = {0xb5, 0x62};
-int IDX_PAYLOAD_SIZE = 2;
-int HEADERS_SIZE = 3;
+int IDX_PAYLOAD_SIZE = 4;
+int HEADERS_SIZE = 5;
+int local_addr = 1;
+int to = 1;
+int nb_modules = 3;
 
 
-void print_rssi()
-{
-  struct s_rssi rssi = lora.get_rssi();
-  char buf[40];
-  sprintf(buf, "Current noise : %d - Last RSSI : %d", rssi.current_noise, rssi.rssi_last_receive);
-  Serial.println(buf);
+void send(int to, String msg) {
+
+  int buf_size = HEADERS_SIZE + msg.length();
+  char buffer[buf_size];
+  buffer[0] = sync_word[0];
+  buffer[1] = sync_word[1];
+  buffer[2] = local_addr;
+  buffer[3] = to;
+  buffer[4] = msg.length();
+  
+  for (int i = 0; i < msg.length(); i++) {
+    buffer[5+i] = msg[i];
+  }
+
+  lora.send(buffer, buf_size);
 }
 
 //Search for sync word in buffer and return index of sync position, or -1 if not found
@@ -29,9 +49,18 @@ int find_sync(char* buffer, int count_buffer, char* sync_word, int count_sync)
 
 void handle_packet(char* buffer, int count)
 {
-  lora.print_hex(buffer, count);
-  print_rssi();
-}    
+  int from = buffer[2];
+  int to = buffer[3];
+  int size = buffer[4];
+
+  if (to == local_addr) {
+    if (random(0,20) == 7) {
+      long idx_msg = random(0, list_msg_size);
+      send(to, list_msg[idx_msg]);
+
+    }
+  }
+}
 
 
 //Receive data as packet. Will look for SYNC word and a field containing payload size
@@ -93,38 +122,36 @@ int receive_packet() {
   return 0;
 }
 
-
-
 void setup()
 {
+  randomSeed(analogRead(0));
+
   lora.set_debug(true);
   lora.begin();
 
-  /*
-  lora.print_config();
-  Serial.println("______________");
   lora.set_channel(18);
-  lora.set_air_data_rate(62.5);
-  lora.set_tx_power(10);
+  lora.set_air_data_rate(2.4);
+  lora.set_tx_power(22);
   lora.set_address(65535);
   lora.set_network(0);
-  lora.set_channel_noise(true);
-  bool result = lora.save_config();
-  */
-  
+  lora.set_channel_noise(false);
 
+  bool result = lora.save_config();
+  Serial.print("save_config : ");
+  Serial.println(result);
   lora.print_config();
 }
 
 
 void loop() 
 {
-  //char msg[] = {0xb5, 0x62, 0x01, 0x02, 0x03};  
-  //lora.send(msg, sizeof(msg) - 1);
-  //delay(10);
+  if (true) { //random(0,20) == 7) {
+    long idx_msg = random(0, list_msg_size);
 
+    send(to, list_msg[idx_msg]);
+    delay(50);
+  }
 
   receive_packet();
-
   delay(1000);
 }

@@ -9,6 +9,7 @@ class sx126x
     sx126x();
     void begin();
     
+    void set_debug(bool enable);
     bool set_address(int address);
     bool set_network(int network);
     bool set_air_data_rate(float air_data_rate);
@@ -18,6 +19,7 @@ class sx126x
     bool set_channel_noise(bool channel_noise);
     bool set_enable_rssi(bool enable_rssi);
     bool set_crypt_key(int key);
+    bool save_config();
     
     bool get_channel_noise();
     bool get_enable_rssi();
@@ -29,13 +31,13 @@ class sx126x
     void print_config();
 
   private:
-    #define serial_lora Serial2 
+    #define serial_lora Serial2
 
     void set_mode(int mode);
     void config(char* data);
     void send_config(char* data, int count);
     s_param read_registers(char* result);
-    void write_registers();
+    bool write_registers();
     int write_serial(char *data, int count, char *result);
 
     s_param params;

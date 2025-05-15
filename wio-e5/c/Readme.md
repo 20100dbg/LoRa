@@ -117,17 +117,21 @@ For example :
 - RIOT/examples/basic/lora
 - RIOT/tests/drivers/sx126x
 
-Connect the LoRa-e5 to both ST-LINK and USB-C
+Connect the LoRa-e5 to both ST-LINK (without RST pin) and USB-C
 
 ##### Flash
+```
 sudo BOARD=lora-e5-dev LORA_DRIVER=sx126x_stm32wl make flash
-
+```
 ##### Open serial communication
+```
 sudo BOARD=lora-e5-dev LORA_DRIVER=sx126x_stm32wl make term
+```
 
 ##### Start debug using gdb
+```
 sudo BOARD=lora-e5-dev LORA_DRIVER=sx126x_stm32wl make debug
-
+```
 
 ### Additionnal notes
 
