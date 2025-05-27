@@ -39,6 +39,12 @@ sudo -H pip install pyserial
 
 And click connect.
 
+If this doesn't work, try :
+- mode : **hot plug**
+- keep pressing the RST button
+- click connect
+- release the RST button
+
 
 
 3) Open left panel, "Option bytes" menu
