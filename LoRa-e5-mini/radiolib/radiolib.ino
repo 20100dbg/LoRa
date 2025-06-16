@@ -55,13 +55,13 @@ void setup() {
   uint16_t preambleLength = 8;
 
   int state = radio.begin(freq, bw, sf, cr, syncWord, power, preambleLength);
-  // set appropriate TCXO voltage for Nucleo WL55JC1
-  //state = radio.setTCXO(1.7);
+
+  //force calibration
+  state = radio.setFrequency(freq);
+  Serial.println(state);
+  delay(50);
+
   
-  /*
-  Serial.print("start : ");
-  Serial.print(state);
-*/
 
   radio.setDio1Action(setFlag);
   radio.startReceive();
